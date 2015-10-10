@@ -5,6 +5,6 @@ import db.EveDatabase
  */
 object Main {
   def main(args: Array[String]) = {
-    new EveDatabase().findObjectByKey("hello")
+    //new EveDatabase().findObjectByKey("hello")
   }
 }
