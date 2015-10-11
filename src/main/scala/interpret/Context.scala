@@ -1,6 +1,6 @@
 package interpret
 
-import com.mongodb.DBObject
+import com.rokuan.calliopecore.sentence.structure.content.{ITimeObject, IPlaceObject, INominalObject}
 
 /**
  * Created by Christophe on 04/10/2015.
@@ -8,7 +8,11 @@ import com.mongodb.DBObject
 
 
 trait Context[Q] {
-  def findLastNominalObject(query: Q)
-  def findLastPlaceObject(query: Q)
-  def findLastTimeObject(query: Q)
+  def addNominalObject(nominalObject: INominalObject)
+  def addPlaceObject(placeObject: IPlaceObject)
+  def addTimeObject(timeObject: ITimeObject)
+
+  def findLastNominalObject(query: Q) : INominalObject
+  def findLastPlaceObject(query: Q) : IPlaceObject
+  def findLastTimeObject(query: Q) : ITimeObject
 }

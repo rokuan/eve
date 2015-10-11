@@ -41,5 +41,6 @@
         <SOURCES />
       </library>
     </orderEntry>
+    <orderEntry type="library" name="SBT: com.google.code.gson:gson:2.4:jar" level="project" />
   </component>
 </module>
