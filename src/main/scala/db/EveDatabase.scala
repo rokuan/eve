@@ -1,6 +1,8 @@
 package db
 
 import com.mongodb.DBObject
+import com.mongodb.casbah.MongoConnection
+import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
@@ -14,6 +16,9 @@ import interpret.Context
  * Created by Christophe on 04/10/2015.
  */
 object EveDatabase {
+  val db = MongoConnection()("eve_")
+  val objectTableName = "eve_data"
+
   val EveKey = "__eve"
   val ThisUserKey = "__this"
   val LocationKey = "__location"
@@ -32,15 +37,29 @@ object EveDatabase {
 class EveDatabase {
   import EveDatabase._
 
-  def set() = {}
+  def set(context: Context, left: INominalObject, field: String, value: INominalObject) = {
+    TransactionManager.inTransaction {
+      transaction =>
+        val leftObject: DBObject = findObject(context, left)
+        val valueObject: DBObject = findObject(context, value)
+
+        leftObject += (field.toLowerCase -> valueObject)
+        transaction(objectTableName) += leftObject
+    }
+  }
+
   def get() = {}
+
+  def accessObject(obj: INominalObject) = {
+    TransactionManager.inTransaction(transaction => ())
+  }
 
   def findObject(context: Context, src: INominalObject): DBObject = {
     src match {
       case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
       case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
       case char: CharacterObject =>
-      case city: CityObject =>
+      case city: CityObject => // TODO: chercher la ville en BD, creer l'objet s'il n'existe pas
       case color: ColorObject =>
       case name: NameObject => findNameObject(context, name)
       case country: CountryObject =>
@@ -71,6 +90,10 @@ class EveDatabase {
         name.count.definition = ArticleType.DEFINITE
         name.setNominalSecondObject(pronoun)
         findObject(context, name)
+      }
+
+      case ArticleType.DEFINITE => {
+
       }
     }
   }
