@@ -12,6 +12,7 @@ import db.EveDatabase
  */
 class Evaluator {
   protected val context: EveContext = new EveContext(EveDatabase.db)
+  protected val database: EveDatabase = new EveDatabase()
 
   def eval(obj: InterpretationObject) = {
     obj match {
@@ -36,19 +37,16 @@ class Evaluator {
   protected def evalAffirmation(affirmation: AffirmationObject) = {
     val action: ActionObject = affirmation.getAction
 
+    // TODO: prendre en compte le temps du verbe (uniquement present pour l'instant)
+
     if(action.does(ActionType.BE)){
-
+      //database.update(context, affirmation.getSubject, affirmation.affirmation)
+      database.set(context, affirmation.getSubject,)
     } else if(action.does(ActionType.HAVE)){
-
+      database.set(context, )
     } else if(action.isAFieldAction) {
       val field = action.getBoundField
-      val fieldObject: NameObject = new NameObject()
-
-      fieldObject.`object` = new INameInfo {
-        override def getValue: String = field
-
-        override def getNameTag: String = field
-      }
+      database.set(context, affirmation.getSubject, field, affirmation.getDirectObject)
     }
   }
 

@@ -3,6 +3,7 @@ package db
 import com.mongodb.DBObject
 import com.mongodb.casbah.{MongoCollection, MongoCursor}
 import com.rokuan.calliopecore.sentence.structure.data.count._
+import com.rokuan.calliopecore.sentence.structure.data.nominal.NameObject
 
 /**
  * Created by Christophe on 21/10/2015.
@@ -32,5 +33,9 @@ object QueryUtils {
     }
 
     queryObject
+  }
+
+  def buildQuery(name: NameObject) = {
+
   }
 }

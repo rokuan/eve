@@ -18,7 +18,8 @@ object EveContext {
   val CalliopeGroupKey = "calliope_object_type"
 }
 
-class EveContext(val db: MongoDB) extends Context[DBObject] {
+//class EveContext(val db: MongoDB) extends Context[DBObject] {
+class EveContext(val db: MongoDB) extends Context[EveObject, DBObject] {
   import EveContext._
 
   protected val objectCollection = db(ContextDbName)

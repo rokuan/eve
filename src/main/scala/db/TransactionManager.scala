@@ -41,46 +41,48 @@ class TransactionManager {
     }
     tablesMap(tableName)
   }
+}
 
-  private class TemporaryTable(val name: String) {
-    private val collection = EveDatabase.db(name)
-    private val inserts = new ListBuffer[ObjectId]
-    private val updates = new mutable.HashMap[ObjectId, DBObject]
+class TemporaryTable(val name: String) {
+  private val collection = EveDatabase.db(name)
+  private val inserts = new ListBuffer[ObjectId]
+  private val updates = new mutable.HashMap[ObjectId, DBObject]
 
-    def applyChanges() = {
-      inserts.clear()
-      updates.clear()
+  def applyChanges() = {
+    inserts.clear()
+    updates.clear()
+  }
+
+  def revertChanges() = {
+    inserts.foreach { oid => collection.remove(MongoDBObject("_id" -> oid)) }
+    updates.values.foreach { collection += _ }
+    inserts.clear()
+    updates.clear()
+  }
+
+  def insert(obj: DBObject) = {
+    val id = collection.insert(obj).getUpsertedId.asInstanceOf[ObjectId]
+    inserts += id
+    id
+  }
+
+  def update(oid: ObjectId, obj: DBObject) = {
+    if(!updates.contains(oid)) {
+      collection.findOneByID(oid).map(old => updates += (oid -> old))
     }
 
-    def revertChanges() = {
-      inserts.foreach { oid => collection.remove(MongoDBObject("_id" -> oid)) }
-      updates.values.foreach { collection += _ }
-      inserts.clear()
-      updates.clear()
-    }
+    collection.update(MongoDBObject("_id" -> oid), obj)
+    oid
+  }
 
-    def insert(obj: DBObject) = {
-      val id = collection.insert(obj).getUpsertedId.asInstanceOf[ObjectId]
-      inserts += id
-    }
-
-    def update(oid: ObjectId, obj: DBObject) = {
-      if(!updates.contains(oid)) {
-        collection.findOneByID(oid).map(old => updates += (oid -> old))
+  def +=(that: DBObject) = {
+    val id: ObjectId =
+      if(that.containsField("_id") && collection.findOneByID(that.get("_id")).nonEmpty){
+        update(that.get("_id").asInstanceOf[ObjectId], that)
+      } else {
+        insert(that)
       }
-
-      collection.update(MongoDBObject("_id" -> oid), obj)
-    }
-
-    def +=(that: DBObject) = {
-      val id: ObjectId =
-        if(that.containsField("_id") && collection.findOneByID(that.get("_id")).nonEmpty)){
-          update(that.get("_id").asInstanceOf[ObjectId], that)
-        } else {
-          insert(that)
-        }
-      id
-    }
+    id
   }
 }
 

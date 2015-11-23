@@ -7,7 +7,7 @@ import com.rokuan.calliopecore.sentence.structure.content.{ITimeObject, IPlaceOb
  */
 
 
-trait Context[Q] {
+trait Context[O, Q] {
   def addNominalObject(nominalObject: INominalObject)
   def addPlaceObject(placeObject: IPlaceObject)
   def addTimeObject(timeObject: ITimeObject)
