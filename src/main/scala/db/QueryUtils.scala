@@ -1,6 +1,7 @@
 package db
 
-import com.mongodb.DBObject
+import com.mongodb.casbah.query.Imports._
+import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.{MongoCollection, MongoCursor}
 import com.rokuan.calliopecore.sentence.structure.data.count._
 import com.rokuan.calliopecore.sentence.structure.data.nominal.NameObject
@@ -9,7 +10,7 @@ import com.rokuan.calliopecore.sentence.structure.data.nominal.NameObject
  * Created by Christophe on 21/10/2015.
  */
 object QueryUtils {
-  def execute(src: MongoCollection, query: DBObject, count: CountObject): MongoCursor = {
+  def execute(src: MongoCollection, query: MongoDBObject, count: CountObject): MongoCursor = {
     val queryObject = count match {
       case fixed: FixedItemObject => {
         src.find(query).skip(fixed.position.toInt - 1).limit(1)

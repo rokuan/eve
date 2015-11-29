@@ -1,6 +1,5 @@
 package db
 
-import com.mongodb.DBObject
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
@@ -8,7 +7,7 @@ import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.Article
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
 import com.rokuan.calliopecore.sentence.structure.data.place.{PlaceObject, AdditionalPlace, NamedPlaceObject, LocationObject}
 import com.rokuan.calliopecore.sentence.structure.data.time.SingleTimeObject
-import com.rokuan.calliopecore.sentence.IPronoun
+import com.rokuan.calliopecore.sentence.{INameInfo, IPronoun}
 import com.rokuan.calliopecore.sentence.structure.content.INominalObject
 import interpret._
 
@@ -37,6 +36,8 @@ object EveDatabase {
 
   val UnitKey = "__unit"
   val LanguageKey = "__language"
+
+  val ClassKey = "__class"
 }
 
 class EveDatabase {
@@ -51,19 +52,33 @@ class EveDatabase {
   def set(context: EveContext, left: INominalObject, field: String, value: INominalObject) = {
     TransactionManager.inTransaction[Unit] {
       transaction => {
-        val valueObject = findObject (context, value).get.normalize
+        val valueObject = findObject (context, value).get
 
         findObject(context, left).map { obj: EveObject =>
           obj match {
             case EveStructuredObject(o) => {
-              o += (field.toLowerCase -> valueObject)
-              transaction (objectCollectionName) += o
+              o += (field.toLowerCase -> valueObject.normalize())
+              transaction(objectCollectionName) += o
             }
             case EveStructuredObjectList(os) => {
-              os.foreach(o => {
-                o += (field.toLowerCase -> valueObject)
-                transaction (objectCollectionName) += o
-              })
+              valueObject match {
+                case EveStructuredObjectList(vs) if os.length >= vs.length => {
+                  os.zip(vs).foreach(p => {
+                    val o = p._1.asInstanceOf[EveStructuredObject].o
+                    val v = p._2.normalize()
+                    o += (field.toLowerCase -> v)
+                    transaction(objectCollectionName) += o
+                  })
+                }
+                case _ => {
+                  val v = valueObject.normalize()
+                  os.foreach(elem => {
+                    val o = elem.asInstanceOf[EveStructuredObject].o
+                    o += (field.toLowerCase -> v)
+                    transaction(objectCollectionName) += o
+                  })
+                }
+              }
             }
             case _ => {
               // TODO:
@@ -83,8 +98,6 @@ class EveDatabase {
   def accessObject(obj: INominalObject) = {
     TransactionManager.inTransaction { transaction =>
       val objects = transaction(objectCollectionName)
-
-
     }
   }
 
@@ -92,13 +105,13 @@ class EveDatabase {
       src match {
         case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
         case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
-        case char: CharacterObject => null
+        case char: CharacterObject => findCharacter(context, char)
         case city: CityObject => null // TODO: chercher la ville en BD, creer l'objet s'il n'existe pas
         case color: ColorObject => null
         case name: NameObject => findNameObject(context, name)
         case country: CountryObject => null
         case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
-        case language: LanguageObject => null // TODO:
+        case language: LanguageObject => findLanguage(language)
         case location: LocationObject => null
         case namedPlace: NamedPlaceObject => null
         //case number:  =>
@@ -129,12 +142,13 @@ class EveDatabase {
           // TODO:
           if(name.getNominalSecondObject == null){
             val content = context.findLastNominalObject(MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase))
-            content
+            // TODO: transformer le nominal object en EveObject
+            null
           } else {
             val from = findObject(context, name.getNominalSecondObject)
-
+            //from.map(src => src.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
+            EveObject(from.get.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
           }
-          null
         }
 
         case ArticleType.INDEFINITE => {
@@ -150,6 +164,25 @@ class EveDatabase {
       }
     }
   }
+
+  protected def findCharacter(context: EveContext, char: CharacterObject): Try[EveObject] = {
+    val name = new NameObject() {
+      count = char.count
+      `object` = new INameInfo {
+        override def getValue: String = char.characterType.name().toLowerCase()
+        override def getNameTag: String = char.characterType.name().toLowerCase()
+      }
+    }
+    findNameObject(context, name)
+  }
+
+  protected def findLanguage(language: LanguageObject): Try[EveObject] =
+    Try {
+      val o = objectsCollection.findOne(MongoDBObject(
+        ClassKey -> classOf[LanguageObject].getName,
+        LanguageKey -> language.language.getLanguageCode)).get
+      new EveStructuredObject(o)
+    }
 
   protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
   protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget): Try[EveObject] = findPronounSource(context, abstractTarget.source)

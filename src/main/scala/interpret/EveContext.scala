@@ -1,7 +1,6 @@
 package interpret
 
 import com.google.gson.Gson
-import com.mongodb.DBObject
 import com.mongodb.casbah.MongoDB
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
@@ -18,8 +17,8 @@ object EveContext {
   val CalliopeGroupKey = "calliope_object_type"
 }
 
-//class EveContext(val db: MongoDB) extends Context[DBObject] {
-class EveContext(val db: MongoDB) extends Context[EveObject, DBObject] {
+//class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
+class EveContext(val db: MongoDB) extends Context[EveObject, MongoDBObject] {
   import EveContext._
 
   protected val objectCollection = db(ContextDbName)
@@ -33,33 +32,33 @@ class EveContext(val db: MongoDB) extends Context[EveObject, DBObject] {
   override def addPlaceObject(placeObject: IPlaceObject): Unit =
     objectCollection += serializeObject(placeObject, classOf[IPlaceObject])
 
-  protected def serializeObject(obj: AnyRef, objClass: Class[_]): DBObject = {
+  protected def serializeObject(obj: AnyRef, objClass: Class[_]): MongoDBObject = {
     val gson: Gson = FullGsonBuilder.getSerializationGsonBuilder.create()
-    JSON.parse(gson.toJson(obj, objClass)).asInstanceOf[DBObject]
+    JSON.parse(gson.toJson(obj, objClass)).asInstanceOf[MongoDBObject]
   }
 
-  override def findLastNominalObject(query: DBObject): INominalObject = {
+  override def findLastNominalObject(query: MongoDBObject): INominalObject = {
     val result = queryWithObjectType(query, "nominal")
     deserializeObject(result, classOf[INominalObject])
   }
 
-  override def findLastTimeObject(query: DBObject): ITimeObject = {
+  override def findLastTimeObject(query: MongoDBObject): ITimeObject = {
     val result = queryWithObjectType(query, "time")
     deserializeObject(result, classOf[ITimeObject])
   }
 
-  override def findLastPlaceObject(query: DBObject): IPlaceObject = {
+  override def findLastPlaceObject(query: MongoDBObject): IPlaceObject = {
     val result = queryWithObjectType(query, "place")
     deserializeObject(result, classOf[IPlaceObject])
   }
 
-  protected def queryWithObjectType(initialQuery: DBObject, objectType: String): DBObject = {
+  protected def queryWithObjectType(initialQuery: MongoDBObject, objectType: String): MongoDBObject = {
     val finalQuery = initialQuery ++ (CalliopeGroupKey $eq objectType)
-    val result: DBObject = objectCollection.findOne(finalQuery).get
+    val result: MongoDBObject = objectCollection.findOne(finalQuery).get
     result
   }
 
-  protected def deserializeObject[T](obj: DBObject, objClass: Class[T]): T = {
+  protected def deserializeObject[T](obj: MongoDBObject, objClass: Class[T]): T = {
     val gson: Gson = FullGsonBuilder.getDeserializationGsonBuilder.create()
     gson.fromJson(JSON.serialize(obj), objClass)
   }

@@ -27,10 +27,21 @@ class Evaluator {
 
     val expectedType = question.questionType match {
       case QuestionType.HOW_MANY => NumberResultType
-      case QuestionType.WHAT | QuestionType.WHO =>
+      case QuestionType.WHAT | QuestionType.WHO => classOf[EveObject]
       case QuestionType.WHEN => DateResultType
       case QuestionType.YES_NO => BooleanResultType
       case QuestionType.WHERE => PlaceResultType
+      case _ => classOf[EveObject]
+    }
+
+    val action = question.getAction
+
+    if(action.does(ActionType.BE)){
+      val result = database.findObject(context, question.getDirectObject)
+      // TODO: decommenter et verifier qu'il y a bien un resultat
+      //result.map(v => v.asInstanceOf[expectedType.type])
+      //result.get.asInstanceOf[expectedType.type].toString
+      result.get.toString
     }
   }
 
@@ -41,9 +52,9 @@ class Evaluator {
 
     if(action.does(ActionType.BE)){
       //database.update(context, affirmation.getSubject, affirmation.affirmation)
-      database.set(context, affirmation.getSubject,)
+      //database.set(context, affirmation.getSubject, affirmation)
     } else if(action.does(ActionType.HAVE)){
-      database.set(context, )
+      //database.set(context, )
     } else if(action.isAFieldAction) {
       val field = action.getBoundField
       database.set(context, affirmation.getSubject, field, affirmation.getDirectObject)

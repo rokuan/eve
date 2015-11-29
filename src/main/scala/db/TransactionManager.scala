@@ -1,6 +1,6 @@
 package db
 
-import com.mongodb.{WriteResult, DBObject}
+import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import org.bson.types.ObjectId
 
@@ -46,7 +46,7 @@ class TransactionManager {
 class TemporaryTable(val name: String) {
   private val collection = EveDatabase.db(name)
   private val inserts = new ListBuffer[ObjectId]
-  private val updates = new mutable.HashMap[ObjectId, DBObject]
+  private val updates = new mutable.HashMap[ObjectId, MongoDBObject]
 
   def applyChanges() = {
     inserts.clear()
@@ -60,13 +60,13 @@ class TemporaryTable(val name: String) {
     updates.clear()
   }
 
-  def insert(obj: DBObject) = {
+  def insert(obj: MongoDBObject) = {
     val id = collection.insert(obj).getUpsertedId.asInstanceOf[ObjectId]
     inserts += id
     id
   }
 
-  def update(oid: ObjectId, obj: DBObject) = {
+  def update(oid: ObjectId, obj: MongoDBObject) = {
     if(!updates.contains(oid)) {
       collection.findOneByID(oid).map(old => updates += (oid -> old))
     }
@@ -75,7 +75,7 @@ class TemporaryTable(val name: String) {
     oid
   }
 
-  def +=(that: DBObject) = {
+  def +=(that: MongoDBObject) = {
     val id: ObjectId =
       if(that.containsField("_id") && collection.findOneByID(that.get("_id")).nonEmpty){
         update(that.get("_id").asInstanceOf[ObjectId], that)
