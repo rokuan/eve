@@ -81,7 +81,7 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
 
     val evaluator = new Evaluator()
     evaluator.eval(myNameIsChristophe)
-    val result = evaluator.eval(whatIsMyName))
+    val result = evaluator.eval(whatIsMyName)
     assert(result.isInstanceOf[EveStringObject])
     assert(result.asInstanceOf[EveStringObject].s == "Christophe")
   }

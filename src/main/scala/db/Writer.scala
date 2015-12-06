@@ -2,8 +2,7 @@ package db
 
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{QuantityObject, UnitObject, LanguageObject}
-import db.QuantityObjectKey
+import com.rokuan.calliopecore.sentence.structure.data.nominal._
 
 /**
   * Created by Christophe on 29/11/2015.
@@ -16,6 +15,8 @@ object ObjectWriter {
   val LanguageObjectType = classOf[LanguageObject]
   val UnitObjectType = classOf[UnitObject]
   val QuantityObjectType = classOf[QuantityObject]
+  val PhoneNumberObjectType = classOf[PhoneNumberObject]
+  val ColorObjectType = classOf[ColorObject]
 
   def write[T](o: T)(implicit w: Writer[T]) = w.write(o)
 
@@ -41,6 +42,14 @@ object ObjectWriter {
         EveDatabase.ClassKey -> QuantityObjectType.getName,
         QuantityObjectKey.Value -> o.amount,
         QuantityObjectKey.Type -> o.unitType.name()
+      )
+  }
+
+  implicit object PhoneNumberWriter extends Writer[PhoneNumberObject] {
+    override def write(o: PhoneNumberObject) =
+      MongoDBObject(
+        EveDatabase.ClassKey -> PhoneNumberObjectType.getName,
+        PhoneNumberObjectKey.Value -> o.number
       )
   }
 }

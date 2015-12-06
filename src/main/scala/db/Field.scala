@@ -16,4 +16,14 @@ object QuantityObjectKey {
   val Type = UnitObjectKey.Type
 }
 
+object PhoneNumberObjectKey {
+  val Value = "phone_number_value"
+}
+
+object ColorObjectKey {
+  val Code = "color_code"
+}
+
+
+
 

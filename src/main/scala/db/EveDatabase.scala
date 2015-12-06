@@ -14,11 +14,12 @@ import interpret._
 import scala.util.Try
 
 /**
- * Created by Christophe on 04/10/2015.
- */
+  * Created by Christophe on 04/10/2015.
+  */
 object EveDatabase {
   val db = MongoConnection()("eve_")
   val objectCollectionName = "eve_data"
+  val typeCollectionName = "eve_types"
 
   val IdKey = "_id"
 
@@ -34,16 +35,14 @@ object EveDatabase {
   val ValueKey = "__value"
   val TypeKey = "__type"
 
-  val UnitKey = "__unit"
-  val LanguageKey = "__language"
-
   val ClassKey = "__class"
 }
 
 class EveDatabase {
   import EveDatabase._
-  
+
   val objectsCollection: MongoCollection = db(objectCollectionName)
+  val typesCollection: MongoCollection = db(typeCollectionName)
 
   def update(context: EveContext, left: INominalObject, value: INominalObject) = {
 
@@ -52,7 +51,7 @@ class EveDatabase {
   def set(context: EveContext, left: INominalObject, field: String, value: INominalObject) = {
     TransactionManager.inTransaction[Unit] {
       transaction => {
-        val valueObject = findObject (context, value).get
+        val valueObject = findObject(context, value).get
 
         findObject(context, left).map { obj: EveObject =>
           obj match {
@@ -102,29 +101,29 @@ class EveDatabase {
   }
 
   def findObject(context: EveContext, src: INominalObject, createIfNeeded: Boolean = false): Try[EveObject] = {
-      src match {
-        case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
-        case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
-        case char: CharacterObject => findCharacter(context, char)
-        case city: CityObject => null // TODO: chercher la ville en BD, creer l'objet s'il n'existe pas
-        case color: ColorObject => null
-        case name: NameObject => findNameObject(context, name)
-        case country: CountryObject => null
-        case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
-        case language: LanguageObject => findLanguage(language)
-        case location: LocationObject => null
-        case namedPlace: NamedPlaceObject => null
-        //case number:  =>
-        case additionalObject: AdditionalObject => findAdditionalDataByCode(additionalObject.`object`.getCode)
-        case additionalPerson: AdditionalPerson => findAdditionalDataByCode(additionalPerson.person.getCode)
-        case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(MongoDBObject(ValueKey -> phoneNumber.number)))
-        case placeType: PlaceObject => null
-        case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
-        case quantity: QuantityObject => Try(new EveStructuredObject(MongoDBObject(ValueKey -> quantity.amount, UnitKey -> quantity.unitType.name())))
-        case unit: UnitObject => Try(new EveStructuredObject(MongoDBObject(UnitKey -> unit.unitType.name())))
-        case verbalGroup: VerbalGroup => null
-        case _ => null
-      }
+    src match {
+      case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
+      case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
+      case char: CharacterObject => findCharacter(context, char)
+      case city: CityObject => null // TODO: chercher la ville en BD, creer l'objet s'il n'existe pas
+      case color: ColorObject => findColor(color)
+      case name: NameObject => findNameObject(context, name)
+      case country: CountryObject => null
+      case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
+      case language: LanguageObject => findLanguage(language)
+      case location: LocationObject => null
+      case namedPlace: NamedPlaceObject => null
+      //case number:  =>
+      case additionalObject: AdditionalObject => findAdditionalDataByCode(additionalObject.`object`.getCode)
+      case additionalPerson: AdditionalPerson => findAdditionalDataByCode(additionalPerson.person.getCode)
+      case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(ObjectWriter.write(phoneNumber)))
+      case placeType: PlaceObject => null
+      case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
+      case quantity: QuantityObject => Try(new EveStructuredObject(ObjectWriter.write(quantity)))
+      case unit: UnitObject => Try(new EveStructuredObject(ObjectWriter.write(unit)))
+      case verbalGroup: VerbalGroup => null
+      case _ => null
+    }
   }
 
   protected def findNameObject(context: EveContext, name: NameObject): Try[EveObject] = {
@@ -179,8 +178,17 @@ class EveDatabase {
   protected def findLanguage(language: LanguageObject): Try[EveObject] =
     Try {
       val o = objectsCollection.findOne(MongoDBObject(
-        ClassKey -> classOf[LanguageObject].getName,
-        LanguageKey -> language.language.getLanguageCode)).get
+        ClassKey -> ObjectWriter.LanguageObjectType.getName,
+        LanguageObjectKey.Code -> language.language.getLanguageCode)).get
+      new EveStructuredObject(o)
+    }
+
+  protected def findColor(color: ColorObject): Try[EveObject] =
+    Try {
+      val o = objectsCollection.findOne(MongoDBObject(
+        ClassKey -> ObjectWriter.ColorObjectType.getName,
+        ColorObjectKey.Code -> color.color.getColorHexCode
+      )).get
       new EveStructuredObject(o)
     }
 
@@ -198,4 +206,44 @@ class EveDatabase {
   protected def findObjectByKey(value: String) = findObjectByAttribute(ReservedKey, value)
   protected def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
   protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
+
+  protected def getType(o: EveObject): EveType = {
+    o match {
+      case EveStructuredObject(content) => EveType(content.getAs[MongoDBObject](TypeKey).get)
+      case EveStructuredObjectList(os) => getCommonSuperType(os.map(getType(_)))
+    }
+  }
+
+  protected def getCommonSuperType(types: Seq[EveType]): EveType = {
+    val distinctTypes = types.distinct
+    if(distinctTypes.length > 0){
+      // Should not happen
+      EveType.RootType
+    } else {
+      distinctTypes.foldLeft(distinctTypes(0)) { (t1, t2) => getCommonSuperType(t1, t2) }
+    }
+  }
+
+  protected def getCommonSuperType(t1: EveType, t2: EveType): EveType = {
+    // TODO: find the smallest common type
+    def getSuperType(t: EveType) = {
+      val result = typesCollection.findOne(MongoDBObject("name" -> t.name)).get.getAs[MongoDBObject]("parent").get
+      EveType(result)
+    }
+
+    var leftType = t1
+    var rightType = t2
+
+    while (!leftType.equals(rightType)) {
+      while (leftType.level > rightType.level) {
+        leftType = getSuperType(leftType)
+      }
+
+      while (rightType.level > leftType.level) {
+        rightType = getSuperType(rightType)
+      }
+    }
+
+    leftType
+  }
 }
