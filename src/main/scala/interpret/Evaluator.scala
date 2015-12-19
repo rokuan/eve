@@ -1,11 +1,15 @@
 package interpret
 
+import java.util.Locale
+
 import com.rokuan.calliopecore.sentence.Action.ActionType
+import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.WayType
 import com.rokuan.calliopecore.sentence.{INameInfo, ActionObject}
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.NameObject
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{UnitObject, LanguageObject, NameObject}
 import com.rokuan.calliopecore.sentence.structure.{OrderObject, AffirmationObject, QuestionObject, InterpretationObject}
-import db.EveDatabase
+import controller.Translator
+import db.{ObjectWriter, EveDatabase}
 
 /**
  * Created by Christophe on 10/10/2015.
@@ -62,6 +66,38 @@ class Evaluator {
   }
 
   protected def evalOrder(order: OrderObject) = {
+    val action: ActionObject = order.getAction
 
+    if(action.does(ActionType.CONVERT)){
+      val unit = order.getWayAdverbial match {
+        case u: UnitObject => u.unitType
+        case _ => throw new RuntimeException("Cannot convert to unspecified unit")
+      }
+
+      val quantityToTranslate = database.findObject(context, order.getDirectObject)
+      quantityToTranslate.map(result => {
+        result match {
+          case EveStructuredObject(o) if o.getAs[String](EveDatabase.ClassKey).getOrElse("") == ObjectWriter.UnitObjectType.getName =>
+            // TODO:
+            new EveStructuredObject(null)
+          case _ => throw new RuntimeException("Only units can be converted")
+        }
+      })
+    } else if(action.does(ActionType.TRANSLATE)){
+      val language = order.getWayAdverbial match {
+        case l: LanguageObject => l.language.getLanguageCode
+        case _ => Locale.getDefault.getLanguage
+      }
+
+      val textToTranslate = database.findObject(context, order.getDirectObject)
+      textToTranslate.map(result => {
+        result match {
+          case EveStringObject(text) => new EveStringObject(Translator.translate(text, language))
+          case EveStructuredObjectList(objects) =>
+            val translations = objects.collect { case EveStringObject(s) => s }.map(text => new EveStringObject(Translator.translate(text, language)))
+            new EveStructuredObjectList(translations)
+        }
+      })
+    }
   }
 }
