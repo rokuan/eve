@@ -9,7 +9,8 @@ import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{UnitObject, LanguageObject, NameObject}
 import com.rokuan.calliopecore.sentence.structure.{OrderObject, AffirmationObject, QuestionObject, InterpretationObject}
 import controller.Translator
-import db.{ObjectWriter, EveDatabase}
+import db.{Writer, EveDatabase}
+import universe.{ActionMessage, World}
 
 /**
  * Created by Christophe on 10/10/2015.
@@ -77,7 +78,7 @@ class Evaluator {
       val quantityToTranslate = database.findObject(context, order.getDirectObject)
       quantityToTranslate.map(result => {
         result match {
-          case EveStructuredObject(o) if o.getAs[String](EveDatabase.ClassKey).getOrElse("") == ObjectWriter.UnitObjectType.getName =>
+          case EveStructuredObject(o) if o.getAs[String](EveDatabase.ClassKey).getOrElse("") == Writer.UnitObjectType.getName =>
             // TODO:
             new EveStructuredObject(null)
           case _ => throw new RuntimeException("Only units can be converted")
@@ -98,6 +99,34 @@ class Evaluator {
             new EveStructuredObjectList(translations)
         }
       })
+    } else if(action.does(ActionType.SEND)){
+
+    } else {
+      // TODO:
+      if(order.getTarget == null){
+        val dest = database.findObject(context, order.getDirectObject, true)
+        dest.map(target => target match {
+          case EveStructuredObject(o) => {
+            o.getAs[String](EveDatabase.CodeKey).map(code =>
+              World.getReceiver(code).map(r =>
+                r.handleMessage(ActionMessage(ActionType.TURN_OFF))
+              )
+            )
+          }
+          case EveStructuredObjectList(os) => {
+            os.collect{ case EveStructuredObject(o) if o.get(EveDatabase.CodeKey).isDefined => o }
+              .flatMap(o => World.getReceiver(o.getAs[String](EveDatabase.CodeKey).get))
+              .map(r => r.handleMessage(ActionMessage(ActionType.TURN_OFF)))  // TODO: recuperer l'action principale
+          }
+        })
+      } else {
+        val what = database.findObject(context, order.getDirectObject, true)
+        val to = database.findObject(context, order.getTarget, true)
+
+        what.map(src =>
+          to.map(target => target)
+        )
+      }
     }
   }
 }

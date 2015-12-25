@@ -105,22 +105,22 @@ class EveDatabase {
       case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
       case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
       case char: CharacterObject => findCharacter(context, char)
-      case city: CityObject => null // TODO: chercher la ville en BD, creer l'objet s'il n'existe pas
+      case city: CityObject => findCity(city)
       case color: ColorObject => findColor(color)
       case name: NameObject => findNameObject(context, name)
-      case country: CountryObject => null
+      case country: CountryObject => findCountry(country)
       case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
       case language: LanguageObject => findLanguage(language)
-      case location: LocationObject => null
-      case namedPlace: NamedPlaceObject => null
+      case location: LocationObject => null // TODO:
+      case namedPlace: NamedPlaceObject => findNamedPlace(namedPlace)
       //case number:  =>
       case additionalObject: AdditionalObject => findAdditionalDataByCode(additionalObject.`object`.getCode)
       case additionalPerson: AdditionalPerson => findAdditionalDataByCode(additionalPerson.person.getCode)
-      case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(ObjectWriter.write(phoneNumber)))
+      case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(Writer.write(phoneNumber)))
       case placeType: PlaceObject => null
       case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
-      case quantity: QuantityObject => Try(new EveStructuredObject(ObjectWriter.write(quantity)))
-      case unit: UnitObject => Try(new EveStructuredObject(ObjectWriter.write(unit)))
+      case quantity: QuantityObject => Try(new EveStructuredObject(Writer.write(quantity)))
+      case unit: UnitObject => Try(new EveStructuredObject(Writer.write(unit)))
       case verbalGroup: VerbalGroup => null
       case _ => null
     }
@@ -175,22 +175,29 @@ class EveDatabase {
     findNameObject(context, name)
   }
 
-  protected def findLanguage(language: LanguageObject): Try[EveObject] =
-    Try {
-      val o = objectsCollection.findOne(MongoDBObject(
-        ClassKey -> ObjectWriter.LanguageObjectType.getName,
-        LanguageObjectKey.Code -> language.language.getLanguageCode)).get
-      new EveStructuredObject(o)
-    }
+  protected def findNamedPlace(place: NamedPlaceObject): Try[EveObject] = {
+    // TODO:
+    null
+  }
 
-  protected def findColor(color: ColorObject): Try[EveObject] =
-    Try {
-      val o = objectsCollection.findOne(MongoDBObject(
-        ClassKey -> ObjectWriter.ColorObjectType.getName,
-        ColorObjectKey.Code -> color.color.getColorHexCode
-      )).get
-      new EveStructuredObject(o)
-    }
+  protected def findLanguage(language: LanguageObject): Try[EveObject] = findOneObject(MongoDBObject(
+    ClassKey -> Writer.LanguageObjectType.getName,
+    LanguageObjectKey.Code -> language.language.getLanguageCode))
+
+  protected def findColor(color: ColorObject): Try[EveObject] = findOneObject(MongoDBObject(
+    ClassKey -> Writer.ColorObjectType.getName,
+    ColorObjectKey.Code -> color.color.getColorHexCode))
+
+  protected def findCity(city: CityObject): Try[EveObject] = findOneObject(MongoDBObject(
+    ClassKey -> Writer.CityObjectType.getName,
+    CityObjectKey.Latitude -> city.city.getLocation.getLatitude,
+    CityObjectKey.Longitude -> city.city.getLocation.getLongitude))
+
+  protected def findCountry(country: CountryObject): Try[EveObject] = findOneObject(MongoDBObject(
+    ClassKey -> Writer.CountryObjectType.getName,
+    CountryObjectKey.Code -> country.country.getCountryCode))
+
+  protected def findOneObject(query: MongoDBObject) = Try { new EveStructuredObject(objectsCollection.findOne(query).get) }
 
   protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
   protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget): Try[EveObject] = findPronounSource(context, abstractTarget.source)
@@ -207,7 +214,7 @@ class EveDatabase {
   protected def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
   protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
 
-  protected def getType(o: EveObject): EveType = {
+  /*protected def getType(o: EveObject): EveType = {
     o match {
       case EveStructuredObject(content) => EveType(content.getAs[MongoDBObject](TypeKey).get)
       case EveStructuredObjectList(os) => getCommonSuperType(os.map(getType(_)))
@@ -245,5 +252,5 @@ class EveDatabase {
     }
 
     leftType
-  }
+  }*/
 }

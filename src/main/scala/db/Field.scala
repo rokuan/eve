@@ -24,6 +24,15 @@ object ColorObjectKey {
   val Code = "color_code"
 }
 
+object CityObjectKey {
+  val Latitude = "city_latitude"
+  val Longitude = "city_longitude"
+}
+
+object CountryObjectKey {
+  val Code = "country_code"
+}
+
 
 
 

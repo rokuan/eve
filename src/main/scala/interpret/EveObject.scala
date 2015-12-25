@@ -79,4 +79,6 @@ case class EveStructuredObjectList(a: Seq[EveObject]) extends EveObject {
   override def toString() = a.mkString(", ")
 }
 
-
+object EveConversion {
+  //implicit def EveStructuredObjectList2EveNumberObject(value: EveStructuredObjectList) = new EveNumberObject(value.a.length)
+}

@@ -11,12 +11,14 @@ trait Writer[T] {
   def write(o: T): MongoDBObject
 }
 
-object ObjectWriter {
+object Writer {
   val LanguageObjectType = classOf[LanguageObject]
   val UnitObjectType = classOf[UnitObject]
   val QuantityObjectType = classOf[QuantityObject]
   val PhoneNumberObjectType = classOf[PhoneNumberObject]
   val ColorObjectType = classOf[ColorObject]
+  val CityObjectType = classOf[CityObject]
+  val CountryObjectType = classOf[CountryObject]
 
   def write[T](o: T)(implicit w: Writer[T]) = w.write(o)
 
