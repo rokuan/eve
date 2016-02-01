@@ -1,4 +1,4 @@
-package interpret
+package com.ideal.eve.interpret
 
 import java.text.{DateFormat, SimpleDateFormat}
 import java.util.Date
@@ -78,6 +78,8 @@ case class EveStructuredObjectList(a: Seq[EveObject]) extends EveObject {
   override def normalize() = a.map(_.normalize())
   override def toString() = a.mkString(", ")
 }
+
+case
 
 object EveConversion {
   //implicit def EveStructuredObjectList2EveNumberObject(value: EveStructuredObjectList) = new EveNumberObject(value.a.length)

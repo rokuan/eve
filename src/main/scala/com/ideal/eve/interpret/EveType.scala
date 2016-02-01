@@ -1,4 +1,4 @@
-package interpret
+package com.ideal.eve.interpret
 
 import com.mongodb.casbah.commons.MongoDBObject
 

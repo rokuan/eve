@@ -1,4 +1,4 @@
-package db
+package com.ideal.eve.db
 
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.mongodb.casbah.query.Imports._
@@ -9,7 +9,7 @@ import com.rokuan.calliopecore.sentence.structure.data.place.{PlaceObject, Addit
 import com.rokuan.calliopecore.sentence.structure.data.time.SingleTimeObject
 import com.rokuan.calliopecore.sentence.{INameInfo, IPronoun}
 import com.rokuan.calliopecore.sentence.structure.content.INominalObject
-import interpret._
+import com.ideal.eve.interpret._
 
 import scala.util.Try
 
@@ -140,9 +140,10 @@ class EveDatabase {
         case ArticleType.DEFINITE => {
           // TODO:
           if(name.getNominalSecondObject == null){
-            val content = context.findLastNominalObject(MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase))
-            // TODO: transformer le nominal object en EveObject
-            null
+            val query = MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase)
+            findOneObject(query).map(o => o).get
+            // TODO: changer le type de valeurs du EveContext
+            //.getOrElse(new EveStructuredObject(Writer.write(context.findLastNominalObject(query))))
           } else {
             val from = findObject(context, name.getNominalSecondObject)
             //from.map(src => src.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
@@ -197,7 +198,7 @@ class EveDatabase {
     ClassKey -> Writer.CountryObjectType.getName,
     CountryObjectKey.Code -> country.country.getCountryCode))
 
-  protected def findOneObject(query: MongoDBObject) = Try { new EveStructuredObject(objectsCollection.findOne(query).get) }
+  protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(query).get) }
 
   protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
   protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget): Try[EveObject] = findPronounSource(context, abstractTarget.source)
@@ -210,6 +211,16 @@ class EveDatabase {
     }
   }
 
+  protected def queryObjectByType(t: String) = {
+    val results = objectsCollection.find(MongoDBObject(TypeKey -> t))
+    val objects = results.toList
+    results.close
+    new EveStructuredObjectList(objects.map(EveObject(_)))
+    /*val objects = results.toStream
+    results.close()
+    new EveStructuredObjectStream(objects)*/
+    // TODO: transformer en stream pour les quantites trop grandes + chercher les types qui extends ?
+  }
   protected def findObjectByKey(value: String) = findObjectByAttribute(ReservedKey, value)
   protected def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
   protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }

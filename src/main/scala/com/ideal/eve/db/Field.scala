@@ -1,4 +1,4 @@
-package db
+package com.ideal.eve.db
 
 /**
   * Created by Christophe on 29/11/2015.

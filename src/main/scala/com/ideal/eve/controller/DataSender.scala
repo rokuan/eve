@@ -1,8 +1,8 @@
-package controller
+package com.ideal.eve.controller
 
 /**
   * Created by Christophe on 25/12/2015.
   */
-class DataSender {
+object DataSender {
 
 }

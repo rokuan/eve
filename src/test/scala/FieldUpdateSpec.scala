@@ -9,7 +9,7 @@ import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.Article
 import com.rokuan.calliopecore.sentence.structure.data.count.{AllItemsObject, CountObject}
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PronounSubject}
 import com.rokuan.calliopecore.sentence.structure.{QuestionObject, AffirmationObject, InterpretationObject}
-import interpret.{EveStringObject, Evaluator}
+import com.ideal.eve.interpret.{EveStringObject, Evaluator}
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
@@ -24,13 +24,14 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     })
     val named: IVerbConjugation = new IVerbConjugation {
       override def getValue: String = "m'appelle"
-      override def does(actionType: ActionType): Boolean = false
+      //override def does(actionType: ActionType): Boolean = false
 
       override def getVerb: IVerb = new IVerb {
         override def getValue: String = "s'appeler"
         override def isAFieldAction: Boolean = true
-        override def hasAction(actionType: ActionType): Boolean = false
-        override def getActions: util.Set[ActionType] = null
+        override def getAction: ActionType = ActionType.NAME
+        //override def hasAction(actionType: ActionType): Boolean = false
+        //override def getActions: util.Set[ActionType] = null
         override def getBoundField: String = "name"
       }
 
@@ -51,13 +52,14 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
 
     val is = new IVerbConjugation {
       override def getValue: String = "est"
-      override def does(actionType: ActionType): Boolean = getVerb.hasAction(actionType)
+      //override def does(actionType: ActionType): Boolean = getVerb.hasAction(actionType)
 
       override def getVerb: IVerb = new IVerb {
         override def getValue: String = "être"
         override def isAFieldAction: Boolean = false
-        override def hasAction(actionType: ActionType): Boolean = actionType == ActionType.BE
-        override def getActions: util.Set[ActionType] = null
+        override def getAction: ActionType = ActionType.BE
+        //override def hasAction(actionType: ActionType): Boolean = actionType == ActionType.BE
+        //override def getActions: util.Set[ActionType] = null
         override def getBoundField: String = null
       }
 

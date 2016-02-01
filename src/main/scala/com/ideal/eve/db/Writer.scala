@@ -1,4 +1,4 @@
-package db
+package com.ideal.eve.db
 
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
@@ -20,7 +20,7 @@ object Writer {
   val CityObjectType = classOf[CityObject]
   val CountryObjectType = classOf[CountryObject]
 
-  def write[T](o: T)(implicit w: Writer[T]) = w.write(o)
+  def write[T](o: T)(implicit w: Writer[T]): MongoDBObject = w.write(o)
 
   implicit object LanguageObjectWriter extends Writer[LanguageObject] {
     override def write(o: LanguageObject) =

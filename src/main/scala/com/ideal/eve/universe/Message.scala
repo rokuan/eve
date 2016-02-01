@@ -1,4 +1,4 @@
-package universe
+package com.ideal.eve.universe
 
 import com.rokuan.calliopecore.sentence.Action.ActionType
 

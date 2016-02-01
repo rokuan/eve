@@ -1,4 +1,4 @@
-package universe
+package com.ideal.eve.universe
 
 /**
   * Created by Christophe on 24/12/2015.

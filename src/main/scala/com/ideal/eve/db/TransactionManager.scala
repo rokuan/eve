@@ -1,4 +1,4 @@
-package db
+package com.ideal.eve.db
 
 import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
