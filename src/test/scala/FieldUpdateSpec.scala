@@ -1,20 +1,16 @@
-import java.util
-
-import com.rokuan.calliopecore.sentence.Action.ActionType
+import com.rokuan.calliopecore.sentence.IAction.{Tense, Form, ActionType}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence._
-import com.rokuan.calliopecore.sentence.IVerbConjugation.{Form, Tense}
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
-import com.rokuan.calliopecore.sentence.structure.data.count.{AllItemsObject, CountObject}
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PronounSubject}
-import com.rokuan.calliopecore.sentence.structure.{QuestionObject, AffirmationObject, InterpretationObject}
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{PersonObject, NameObject, PronounSubject}
+import com.rokuan.calliopecore.sentence.structure.{QuestionObject, AffirmationObject}
 import com.ideal.eve.interpret.{EveStringObject, Evaluator}
 import org.scalatest.{Matchers, FlatSpec}
 
 /**
- * Created by Christophe on 25/10/2015.
- */
+  * Created by Christophe on 25/10/2015.
+  */
 class FieldUpdateSpec extends FlatSpec with Matchers {
   "The database" should "change my name to Christophe" in {
     val myNameIsChristophe = new AffirmationObject()
@@ -22,49 +18,34 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
       override def getValue: String = "je"
       override def getSource: PronounSource = PronounSource.I
     })
-    val named: IVerbConjugation = new IVerbConjugation {
+    val named: IAction = new IAction {
       override def getValue: String = "m'appelle"
-      //override def does(actionType: ActionType): Boolean = false
-
-      override def getVerb: IVerb = new IVerb {
-        override def getValue: String = "s'appeler"
-        override def isAFieldAction: Boolean = true
-        override def getAction: ActionType = ActionType.NAME
-        //override def hasAction(actionType: ActionType): Boolean = false
-        //override def getActions: util.Set[ActionType] = null
-        override def getBoundField: String = "name"
-      }
-
+      override def isFieldBound: Boolean = true
+      override def getAction: ActionType = ActionType.BE_NAMED
+      override def getBoundField: String = "name"
       override def getForm: Form = Form.INDICATIVE
       override def getTense: Tense = Tense.PRESENT
-    }
-    val firstname = new NameObject()
-    firstname.`object` = new INameInfo {
-      override def getValue: String = "Christophe"
-      override def getNameTag: String = null
+      override def getState: String = null
+      override def isStateBound: Boolean = false
+      override def getBoundState: String = null
     }
 
     myNameIsChristophe.setSubject(i)
     myNameIsChristophe.setAction(new ActionObject(Tense.PRESENT, named))
-    myNameIsChristophe.setDirectObject(firstname)
+    myNameIsChristophe.setDirectObject(new PersonObject("Christophe"))
 
     val whatIsMyName = new QuestionObject
 
-    val is = new IVerbConjugation {
+    val is = new IAction {
       override def getValue: String = "est"
-      //override def does(actionType: ActionType): Boolean = getVerb.hasAction(actionType)
-
-      override def getVerb: IVerb = new IVerb {
-        override def getValue: String = "être"
-        override def isAFieldAction: Boolean = false
-        override def getAction: ActionType = ActionType.BE
-        //override def hasAction(actionType: ActionType): Boolean = actionType == ActionType.BE
-        //override def getActions: util.Set[ActionType] = null
-        override def getBoundField: String = null
-      }
-
+      override def isFieldBound: Boolean = false
+      override def getAction: ActionType = ActionType.BE
+      override def getBoundField: String = null
       override def getForm: Form = Form.INDICATIVE
       override def getTense: Tense = Tense.PRESENT
+      override def getState: String = null
+      override def isStateBound: Boolean = false
+      override def getBoundState: String = null
     }
     val myName = new NameObject()
     myName.count.definition = ArticleType.POSSESSIVE
@@ -81,9 +62,9 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     whatIsMyName.setAction(new ActionObject(Tense.PRESENT, is))
     whatIsMyName.setDirectObject(myName)
 
-    val evaluator = new Evaluator()
-    evaluator.eval(myNameIsChristophe)
-    val result = evaluator.eval(whatIsMyName)
+    val evaluator = Evaluator()
+    evaluator.eval(myNameIsChristophe)("chris")
+    val result = evaluator.eval(whatIsMyName)("chris")
     assert(result.isInstanceOf[EveStringObject])
     assert(result.asInstanceOf[EveStringObject].s == "Christophe")
   }

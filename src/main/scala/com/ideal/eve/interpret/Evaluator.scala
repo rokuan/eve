@@ -4,22 +4,31 @@ import java.util.Locale
 
 import com.ideal.eve.controller.Translator
 import com.ideal.eve.db.{EveDatabase, Writer}
-import com.rokuan.calliopecore.sentence.Action.ActionType
-import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.WayType
-import com.rokuan.calliopecore.sentence.{INameInfo, ActionObject}
+import com.rokuan.calliopecore.sentence.{IAction, ActionObject}
+import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{UnitObject, LanguageObject, NameObject}
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{VerbalGroup, UnitObject, LanguageObject, NameObject}
 import com.rokuan.calliopecore.sentence.structure.{OrderObject, AffirmationObject, QuestionObject, InterpretationObject}
 import com.ideal.eve.universe.{ActionMessage, World}
 
 /**
  * Created by Christophe on 10/10/2015.
  */
-class Evaluator {
-  protected val context: EveContext = new EveContext(EveDatabase.db)
-  protected val database: EveDatabase = new EveDatabase()
+object Evaluator {
+  val context: EveContext = new EveContext(EveDatabase.db)
+  val database: EveDatabase = new EveDatabase()
+  private var evaluator: Evaluator = null
 
-  def eval(obj: InterpretationObject) = {
+  def apply() = {
+    if(evaluator == null) {
+      evaluator = new Evaluator(context, database)
+    }
+    evaluator
+  }
+}
+
+class Evaluator(val context: EveContext, val database: EveDatabase) {
+  def eval(obj: InterpretationObject)(implicit username: String) = {
     obj match {
       case question: QuestionObject => evalQuestion(question)
       case affirmation: AffirmationObject => evalAffirmation(affirmation)
@@ -27,7 +36,7 @@ class Evaluator {
     }
   }
 
-  protected def evalQuestion(question: QuestionObject) = {
+  protected def evalQuestion(question: QuestionObject)(implicit username: String) = {
     import EveObject._
 
     val expectedType = question.questionType match {
@@ -40,9 +49,9 @@ class Evaluator {
     }
 
     val action = question.getAction
-    val actionType = action.getAction
+    val actionType = action.getMainAction.getAction
 
-    if(action == ActionType.BE){
+    if(actionType == ActionType.BE){
       val result = database.findObject(context, question.getDirectObject)
       // TODO: decommenter et verifier qu'il y a bien un resultat
       //result.map(v => v.asInstanceOf[expectedType.type])
@@ -51,8 +60,8 @@ class Evaluator {
     }
   }
 
-  protected def evalAffirmation(affirmation: AffirmationObject) = {
-    val action: ActionObject = affirmation.getAction
+  protected def evalAffirmation(affirmation: AffirmationObject)(implicit username: String) = {
+    val action: IAction = affirmation.getAction.getMainAction
     val actionType = action.getAction
 
     // TODO: prendre en compte le temps du verbe (uniquement present pour l'instant)
@@ -62,17 +71,29 @@ class Evaluator {
       //database.set(context, affirmation.getSubject, affirmation)
     } else if(actionType == ActionType.HAVE){
       //database.set(context, )
-    } else if(action.isAFieldAction) {
+    } else if(action.isFieldBound) {
       val field = action.getBoundField
       database.set(context, affirmation.getSubject, field, affirmation.getDirectObject)
     }
   }
 
-  protected def evalOrder(order: OrderObject) = {
-    val action: ActionObject = order.getAction
+  protected def evalOrder(order: OrderObject)(implicit username: String) = {
+    val action: IAction = order.getAction.getMainAction
     val actionType = action.getAction
 
+    if(action.isStateBound) {
+      val stateKey = action.getBoundState
+      val stateValue = action.getState
+      database.updateState(context, order.getDirectObject, stateKey, stateValue)
+    } else {
     actionType match {
+      case ActionType.CHECK => {
+        order.getDirectObject match {
+          case verb: VerbalGroup =>
+            database.check(context, verb)
+        }
+      }
+
       case ActionType.CONVERT => {
         val unit = order.getWayAdverbial match {
           case u: UnitObject => u.unitType
@@ -140,6 +161,7 @@ class Evaluator {
           )
         }
       }
+    }
     }
   }
 }

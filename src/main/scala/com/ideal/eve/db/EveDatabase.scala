@@ -3,12 +3,12 @@ package com.ideal.eve.db
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
-import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
+import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.{CountType, ArticleType}
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
 import com.rokuan.calliopecore.sentence.structure.data.place.{PlaceObject, AdditionalPlace, NamedPlaceObject, LocationObject}
 import com.rokuan.calliopecore.sentence.structure.data.time.SingleTimeObject
 import com.rokuan.calliopecore.sentence.{INameInfo, IPronoun}
-import com.rokuan.calliopecore.sentence.structure.content.INominalObject
+import com.rokuan.calliopecore.sentence.structure.content.{IVerbalObject, INominalObject}
 import com.ideal.eve.interpret._
 
 import scala.util.Try
@@ -34,8 +34,12 @@ object EveDatabase {
   val CodeKey = "__code"
   val ValueKey = "__value"
   val TypeKey = "__type"
+  val UserKey = "__user"
+  val StateKey = "__state"
 
   val ClassKey = "__class"
+
+  def notImplementedYet = throw new RuntimeException("Not implemented yet")
 }
 
 class EveDatabase {
@@ -44,11 +48,71 @@ class EveDatabase {
   val objectsCollection: MongoCollection = db(objectCollectionName)
   val typesCollection: MongoCollection = db(typeCollectionName)
 
-  def update(context: EveContext, left: INominalObject, value: INominalObject) = {
+  def update(context: EveContext, left: INominalObject, value: INominalObject)(implicit username: String) = {
 
   }
 
-  def set(context: EveContext, left: INominalObject, field: String, value: INominalObject) = {
+  def check(context: EveContext, condition: IVerbalObject)(implicit username: String) = {
+
+  }
+
+  private def checkState(context: EveContext, source: INominalObject, key: String, value: String)(implicit username: String): Try[EveObject] = {
+    val target = findObject(context, source)
+
+    Try {
+      target.map { obj =>
+        obj match {
+          case _: EveStructuredObject => new EveBooleanObject(matchesState(obj, key, value))
+          case EveStructuredObjectList(os) => new EveBooleanObject(os.forall(matchesState(_, key, value)))
+          case _ => new EveBooleanObject(false)
+        }
+      }.getOrElse(new EveBooleanObject(false))
+    }
+  }
+
+  def updateState(context: EveContext, source: INominalObject, key: String, value: String)(implicit username: String): Unit = {
+    val target = findObject(context, source)(username)
+
+    target.map { obj =>
+      obj match {
+        case _: EveStructuredObject => updateState(obj, key, value)
+        case EveStructuredObjectList(os) => os.foreach(updateState(_, key, value))
+        case _ =>
+      }
+    }
+  }
+
+  private def getState(source: EveObject, key: String)(implicit username: String): Option[String] = {
+    source match {
+      case EveStructuredObject(o) =>
+        o.getAs[DBObject](StateKey).map(state =>
+          state.getAs[String](key)
+        ).getOrElse(None)
+      case _ => None
+    }
+  }
+
+  private def matchesState(source: EveObject, key: String, value: String)(implicit username: String): Boolean = getState(source, key).map(value == _).getOrElse(false)
+
+  private def updateState(source: EveObject, key: String, value: String): Unit = {
+    source match {
+      case EveStructuredObject(o) => {
+        TransactionManager.inTransaction { transaction =>
+          createStateIfNotExists(o)
+          o(StateKey).asInstanceOf[DBObject](key) = value
+          transaction(objectCollectionName) += o
+        }
+      }
+    }
+  }
+
+  private def createStateIfNotExists(o: MongoDBObject): Unit = {
+    if(o.get(StateKey).isEmpty) {
+      o(StateKey) = MongoDBObject()
+    }
+  }
+
+  def set(context: EveContext, left: INominalObject, field: String, value: INominalObject)(implicit username: String) = {
     TransactionManager.inTransaction[Unit] {
       transaction => {
         val valueObject = findObject(context, value).get
@@ -100,41 +164,42 @@ class EveDatabase {
     }
   }
 
-  def findObject(context: EveContext, src: INominalObject, createIfNeeded: Boolean = false): Try[EveObject] = {
+  def findObject(context: EveContext, src: INominalObject, createIfNeeded: Boolean = false)(implicit username: String): Try[EveObject] = {
     src match {
       case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
       case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
       case char: CharacterObject => findCharacter(context, char)
+      case person: PersonObject => Try(new EveStringObject(person.name))
       case city: CityObject => findCity(city)
       case color: ColorObject => findColor(color)
       case name: NameObject => findNameObject(context, name)
       case country: CountryObject => findCountry(country)
       case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
       case language: LanguageObject => findLanguage(language)
-      case location: LocationObject => null // TODO:
+      case location: LocationObject => notImplementedYet
       case namedPlace: NamedPlaceObject => findNamedPlace(namedPlace)
       //case number:  =>
       case additionalObject: AdditionalObject => findAdditionalDataByCode(additionalObject.`object`.getCode)
       case additionalPerson: AdditionalPerson => findAdditionalDataByCode(additionalPerson.person.getCode)
       case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(Writer.write(phoneNumber)))
-      case placeType: PlaceObject => null
+      case placeType: PlaceObject => notImplementedYet
       case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
       case quantity: QuantityObject => Try(new EveStructuredObject(Writer.write(quantity)))
       case unit: UnitObject => Try(new EveStructuredObject(Writer.write(unit)))
-      case verbalGroup: VerbalGroup => null
-      case _ => null
+      case verbalGroup: VerbalGroup => notImplementedYet
+      case _ => notImplementedYet
     }
   }
 
-  protected def findNameObject(context: EveContext, name: NameObject): Try[EveObject] = {
+  protected def findNameObject(context: EveContext, name: NameObject)(implicit username: String): Try[EveObject] = {
+    /*(name.count.getType, name.count.definition) match {
+      case (CountType.ALL, _) =>
+    }*/
     Try {
       name.count.definition match {
         case ArticleType.POSSESSIVE => {
           // ma voiture => la voiture de moi
-          val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
-          name.count.definition = ArticleType.DEFINITE
-          name.setNominalSecondObject(pronoun)
-          findNameObject(context, name).get
+          findMyNameObject(context, name)(username)
         }
 
         case ArticleType.DEFINITE => {
@@ -153,7 +218,7 @@ class EveDatabase {
 
         case ArticleType.INDEFINITE => {
           // TODO:
-          null
+          notImplementedYet
         }
 
         case ArticleType.NONE => {
@@ -165,7 +230,19 @@ class EveDatabase {
     }
   }
 
-  protected def findCharacter(context: EveContext, char: CharacterObject): Try[EveObject] = {
+  private def findMyNameObject(context: EveContext, name: NameObject)(implicit username: String) = {
+    val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
+    name.count.definition = ArticleType.DEFINITE
+    name.setNominalSecondObject(pronoun)
+    findNameObject(context, name).get
+  }
+
+  private def findQuantityNameObject(context: EveContext, name: NameObject)(implicit username: String) = {
+    // TODO:
+    notImplementedYet
+  }
+
+  protected def findCharacter(context: EveContext, char: CharacterObject)(implicit username: String): Try[EveObject] = {
     val name = new NameObject() {
       count = char.count
       `object` = new INameInfo {
@@ -178,7 +255,7 @@ class EveDatabase {
 
   protected def findNamedPlace(place: NamedPlaceObject): Try[EveObject] = {
     // TODO:
-    null
+    notImplementedYet
   }
 
   protected def findLanguage(language: LanguageObject): Try[EveObject] = findOneObject(MongoDBObject(
@@ -200,14 +277,14 @@ class EveDatabase {
 
   protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(query).get) }
 
-  protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
-  protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget): Try[EveObject] = findPronounSource(context, abstractTarget.source)
+  protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject)(implicit username: String): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
+  protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget)(implicit username: String): Try[EveObject] = findPronounSource(context, abstractTarget.source)
 
-  protected def findPronounSource(context: EveContext, pronoun: IPronoun): Try[EveObject] = {
+  protected def findPronounSource(context: EveContext, pronoun: IPronoun)(implicit username: String): Try[EveObject] = {
     pronoun.getSource match {
-      case IPronoun.PronounSource.I => findObjectByKey(ThisUserKey)
+      case IPronoun.PronounSource.I => findObjectByAttribute(UserKey, username)
       case IPronoun.PronounSource.YOU => findObjectByKey(EveKey)
-      case _ => null // TODO:
+      case _ => notImplementedYet // TODO:
     }
   }
 
@@ -227,7 +304,7 @@ class EveDatabase {
 
   /*protected def getType(o: EveObject): EveType = {
     o match {
-      case EveStructuredObject(content) => EveType(content.getAs[MongoDBObject](TypeKey).get)
+      case EveStructuredObject(content) => EveType(content.getAs[DBObject](TypeKey).get)
       case EveStructuredObjectList(os) => getCommonSuperType(os.map(getType(_)))
     }
   }
@@ -245,7 +322,7 @@ class EveDatabase {
   protected def getCommonSuperType(t1: EveType, t2: EveType): EveType = {
     // TODO: find the smallest common type
     def getSuperType(t: EveType) = {
-      val result = typesCollection.findOne(MongoDBObject("name" -> t.name)).get.getAs[MongoDBObject]("parent").get
+      val result = typesCollection.findOne(MongoDBObject("name" -> t.name)).get.getAs[DBObject]("parent").get
       EveType(result)
     }
 

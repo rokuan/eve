@@ -1,6 +1,7 @@
 package com.ideal.eve.universe
 
-import com.rokuan.calliopecore.sentence.Action.ActionType
+import com.rokuan.calliopecore.sentence.IAction.ActionType
+
 
 /**
   * Created by Christophe on 24/12/2015.

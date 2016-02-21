@@ -13,14 +13,14 @@ import scala.collection.mutable.ListBuffer
  */
 object TransactionManager {
   def inTransaction[T](process: TransactionManager => T) = {
-    val transaction: TransactionManager = new TransactionManager();
+    val transaction: TransactionManager = new TransactionManager()
 
     try {
       process(transaction)
       transaction.commit
     } catch {
       case _: RollBackException => transaction.rollBack
-      case t: Throwable => transaction.rollBack; throw t
+      case t: Throwable => t.printStackTrace(); transaction.rollBack; throw t
     }
   }
 
@@ -70,7 +70,6 @@ class TemporaryTable(val name: String) {
     if(!updates.contains(oid)) {
       collection.findOneByID(oid).map(old => updates += (oid -> old))
     }
-
     collection.update(MongoDBObject("_id" -> oid), obj)
     oid
   }
@@ -78,7 +77,7 @@ class TemporaryTable(val name: String) {
   def +=(that: MongoDBObject) = {
     val id: ObjectId =
       if(that.containsField("_id") && collection.findOneByID(that.get("_id")).nonEmpty){
-        update(that.get("_id").asInstanceOf[ObjectId], that)
+        update(that.get("_id").get.asInstanceOf[ObjectId], that)
       } else {
         insert(that)
       }

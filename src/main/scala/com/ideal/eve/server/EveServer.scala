@@ -3,8 +3,8 @@ package com.ideal.eve.server
 import java.net.{Socket, ServerSocket}
 import java.util.Properties
 
-import akka.actor.{ActorSystem, Props, Actor}
-import akka.actor.Actor.Receive
+/*import akka.actor.{ActorSystem, Props, Actor}
+import akka.actor.Actor.Receive*/
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
 import com.ideal.eve.interpret.Evaluator
@@ -21,7 +21,7 @@ case object StopServerMessage extends EveServerMessage
   * Created by Christophe on 31/01/2016.
   */
 object EveServer {
-  val context = ActorSystem("EveServer")
+  //val context = ActorSystem("EveServer")
 
   val ServerConfigurationFile = "server.properties"
   val HostProperty = classOf[EveServer].getName + ".host"
@@ -34,23 +34,65 @@ object EveServer {
 }
 
 class EveServer(val host: String, val port: Int) extends AutoCloseable {
-  var actor = EveServer.context.actorOf(Props(new EveServerActor(port)))
+  var server: ServerSocket = null
+  var running: Boolean = false
+  val users: collection.mutable.Map[String, EveUser] = collection.mutable.Map[String, EveUser]()
 
   def start() = {
-    actor ! StartServerMessage
+    new Thread(new Runnable(){
+      override def run(): Unit = {
+        server = new ServerSocket(port)
+        running = true
+
+        while(running){
+          try {
+            val client = server.accept()
+            val is = client.getInputStream
+            val loginData = new Array[Byte](is.read() & 0xFF)
+
+            is.read(loginData)
+
+            val passwordData = new Array[Byte](is.read() & 0xFF)
+
+            is.read(passwordData)
+
+            val login = new String(loginData)
+            val password = new String(passwordData)
+
+            EveAuth.login(login, password) match {
+              case Success(l) => {
+                val user = new EveUser(login, client)
+                val os = client.getOutputStream
+                os.write('Y')
+                os.flush()
+                users += (login -> user)
+                new Thread(user).start()
+              }
+              case Failure(e) => {
+                val os = client.getOutputStream
+                os.write('N')
+                os.flush()
+                client.close()
+              }
+            }
+          } catch {
+            case t: Throwable =>
+          }
+        }
+      }
+    }).start()
   }
 
   def stop() = {
-    actor ! StopServerMessage
+    running = false
+    Option(server).map(_.close)
   }
 
   override def close(): Unit = stop
 }
 
-class EveServerActor(val port: Int) extends Actor {
-  var server: ServerSocket = null
-  var running: Boolean = false
-  val users: collection.mutable.Map[String, EveUser] = collection.mutable.Map[String, EveUser]()
+/*class EveServerActor(val port: Int) extends Actor {
+
 
   override def receive = {
     case StartServerMessage => {
@@ -74,7 +116,7 @@ class EveServerActor(val port: Int) extends Actor {
 
           EveAuth.login(login, password) match {
             case Success(l) => {
-              val user = new EveUser(client)
+              val user = new EveUser(login, client)
               val os = client.getOutputStream
               os.write('Y')
               os.flush()
@@ -101,9 +143,9 @@ class EveServerActor(val port: Int) extends Actor {
       running = false
     }
   }
-}
+}*/
 
-class EveUser(val socket: Socket) extends Runnable {
+class EveUser(val username: String, val socket: Socket) extends Runnable {
   override def run(): Unit = {
     var connected = true
     val is = socket.getInputStream
@@ -130,13 +172,15 @@ class EveUser(val socket: Socket) extends Runnable {
             }
           }
 
-          println(json.toString())
+          //println(json.toString())
           val obj = InterpretationObject.fromJSON(json.toString)
-          println(new Evaluator().eval(obj))
+          println(Evaluator().eval(obj)(username))
         }
-
       } catch {
-        case _: Throwable => connected = false
+        case e: Throwable => {
+          e.printStackTrace()
+          connected = false
+        }
       }
     }
 
