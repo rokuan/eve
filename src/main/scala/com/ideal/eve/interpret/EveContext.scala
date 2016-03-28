@@ -1,6 +1,7 @@
 package com.ideal.eve.interpret
 
 import com.google.gson.Gson
+import com.ideal.eve.server.EveSession
 import com.mongodb.casbah.MongoDB
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder

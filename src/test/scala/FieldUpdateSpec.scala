@@ -1,3 +1,4 @@
+import com.ideal.eve.server.EveSession
 import com.rokuan.calliopecore.sentence.IAction.{Tense, Form, ActionType}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence._
@@ -63,8 +64,9 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     whatIsMyName.setDirectObject(myName)
 
     val evaluator = Evaluator()
-    evaluator.eval(myNameIsChristophe)("chris")
-    val result = evaluator.eval(whatIsMyName)("chris")
+    val mySession = new EveSession("chris")
+    evaluator.eval(myNameIsChristophe)(mySession)
+    val result = evaluator.eval(whatIsMyName)(mySession)
     assert(result.isInstanceOf[EveStringObject])
     assert(result.asInstanceOf[EveStringObject].s == "Christophe")
   }

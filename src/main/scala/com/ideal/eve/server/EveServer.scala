@@ -21,8 +21,6 @@ case object StopServerMessage extends EveServerMessage
   * Created by Christophe on 31/01/2016.
   */
 object EveServer {
-  //val context = ActorSystem("EveServer")
-
   val ServerConfigurationFile = "server.properties"
   val HostProperty = classOf[EveServer].getName + ".host"
   val PortProperty = classOf[EveServer].getName + ".port"
@@ -61,12 +59,12 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
 
             EveAuth.login(login, password) match {
               case Success(l) => {
-                val user = new EveUser(login, client)
+                val user = new EveUser(new EveSession(login), client)
                 val os = client.getOutputStream
                 os.write('Y')
                 os.flush()
                 users += (login -> user)
-                new Thread(user).start()
+                user.start()
               }
               case Failure(e) => {
                 val os = client.getOutputStream
@@ -91,61 +89,9 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
   override def close(): Unit = stop
 }
 
-/*class EveServerActor(val port: Int) extends Actor {
+class EveUser(val session: EveSession, val socket: Socket) extends Thread {
+  val evaluator = Evaluator()
 
-
-  override def receive = {
-    case StartServerMessage => {
-      server = new ServerSocket(port)
-      running = true
-
-      while(running){
-        try {
-          val client = server.accept()
-          val is = client.getInputStream
-          val loginData = new Array[Byte](is.read() & 0xFF)
-
-          is.read(loginData)
-
-          val passwordData = new Array[Byte](is.read() & 0xFF)
-
-          is.read(passwordData)
-
-          val login = new String(loginData)
-          val password = new String(passwordData)
-
-          EveAuth.login(login, password) match {
-            case Success(l) => {
-              val user = new EveUser(login, client)
-              val os = client.getOutputStream
-              os.write('Y')
-              os.flush()
-              users += (login -> user)
-              new Thread(user).start()
-            }
-            case Failure(e) => {
-              val os = client.getOutputStream
-              os.write('N')
-              os.flush()
-              client.close()
-            }
-          }
-        } catch {
-          case t: Throwable =>
-        }
-      }
-    }
-
-    case StopServerMessage => {
-      if(server != null){
-        server.close()
-      }
-      running = false
-    }
-  }
-}*/
-
-class EveUser(val username: String, val socket: Socket) extends Runnable {
   override def run(): Unit = {
     var connected = true
     val is = socket.getInputStream
@@ -172,9 +118,8 @@ class EveUser(val username: String, val socket: Socket) extends Runnable {
             }
           }
 
-          //println(json.toString())
           val obj = InterpretationObject.fromJSON(json.toString)
-          println(Evaluator().eval(obj)(username))
+          println(evaluator.eval(obj)(session))
         }
       } catch {
         case e: Throwable => {

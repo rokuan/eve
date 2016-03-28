@@ -1,5 +1,6 @@
 package com.ideal.eve.universe
 
+import com.mongodb.DBObject
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 
 /**
@@ -8,11 +9,14 @@ import com.rokuan.calliopecore.sentence.IAction.ActionType
 object World {
   private val receivers = collection.mutable.Map[String, EveReceiver]()
 
-  def registerReceiver(name: String, receiver: EveReceiver) = receivers.put(name, receiver)
-  def unregisterReceiver(name: String) = receivers.remove(name)
-  def getReceiver(name: String): Option[EveReceiver] = receivers.get(name)
-
-  def execute(action: ActionType, args: Any*) = {
-
+  def registerReceiver(name: String, receiver: EveReceiver) = {
+    receivers.put(name, receiver)
+    receiver.initReceiver()
   }
+
+  def unregisterReceiver(name: String) = receivers.remove(name).map(_.destroyReceiver())
+
+  def unregisterAll(): Unit = receivers.keys.foreach(unregisterReceiver(_))
+
+  def findReceiver(o: DBObject) = receivers.values.find(_.canHandle(o))
 }
