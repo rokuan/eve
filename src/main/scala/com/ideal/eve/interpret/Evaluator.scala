@@ -136,16 +136,12 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
             val dest = database.findObject(context, order.getDirectObject, true)
             dest.map(target => target match {
               case EveStructuredObject(o) => {
-                o.getAs[String](EveDatabase.CodeKey).map(code =>
-                  World.getReceiver(code).map(r =>
-                    r.handleMessage(ActionMessage(ActionType.TURN_OFF))
-                  )
-                )
+                World.findReceiver(o.underlying).map(r => r.handleMessage(ActionMessage(actionType)))
               }
               case EveStructuredObjectList(os) => {
-                os.collect { case EveStructuredObject(o) if o.get(EveDatabase.CodeKey).isDefined => o }
-                  .flatMap(o => World.getReceiver(o.getAs[String](EveDatabase.CodeKey).get))
-                  .map(r => r.handleMessage(ActionMessage(ActionType.TURN_OFF))) // TODO: recuperer l'action principale
+                os.collect { case EveStructuredObject(o) => o }
+                    .flatMap { o => World.findReceiver(o.underlying) }
+                    .map(r => r.handleMessage(ActionMessage(actionType)))
               }
             })
           } else {

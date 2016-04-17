@@ -13,6 +13,7 @@ trait EveReceiver {
   def canHandle(o: DBObject): Boolean
   def handleMessage(message: Message)
   def destroyReceiver(): Unit
+  def getMappings(): Seq[Mapping]
 }
 
 class EveDBReceiver(val mappings: Seq[Mapping]) extends Thread with EveReceiver {
@@ -40,4 +41,6 @@ class EveDBReceiver(val mappings: Seq[Mapping]) extends Thread with EveReceiver 
   override def destroyReceiver(): Unit = {
 
   }
+
+  override def getMappings() = mappings
 }

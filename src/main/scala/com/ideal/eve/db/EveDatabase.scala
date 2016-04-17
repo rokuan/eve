@@ -181,7 +181,6 @@ class EveDatabase {
       case namedPlace: NamedPlaceObject => findNamedPlace(namedPlace)
       case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(Writer.write(phoneNumber)))
       case placeType: PlaceObject => notImplementedYet
-      case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
       case quantity: QuantityObject => Try(new EveStructuredObject(Writer.write(quantity)))
       case unit: UnitObject => Try(new EveStructuredObject(Writer.write(unit)))
       case verbalGroup: VerbalGroup => notImplementedYet
@@ -226,7 +225,6 @@ class EveDatabase {
           // ma voiture => la voiture de moi
           findMyNameObject(context, name)
         }
-
         case ArticleType.DEFINITE => {
           // TODO:
           if(name.getNominalSecondObject == null){
@@ -239,17 +237,13 @@ class EveDatabase {
             EveObject(from.get.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
           }
         }
-
-        case ArticleType.INDEFINITE => {
-          // TODO:
-          notImplementedYet
-        }
-
+        case ArticleType.INDEFINITE => notImplementedYet
         case ArticleType.NONE => {
           // TODO: rajouter un type pour les personnes
           val value = name.`object`.getValue
           new EveStringObject(value)
         }
+        case ArticleType.DEMONSTRATIVE => notImplementedYet
       }
     }
   }

@@ -12,18 +12,21 @@ trait ValueMatcher {
 case object NullValueMatcher extends ValueMatcher {
   override def matches(v: String): Boolean = (v == null)
 }
-case class OrValueMatcher(val values: Array[ValueMatcher]) extends ValueMatcher {
+case class OrValueMatcher(values: Array[ValueMatcher]) extends ValueMatcher {
   override def matches(v: String): Boolean = values.exists(_.matches(v))
 }
 
 abstract class SimpleValueMatcher(value: AnyVal) extends ValueMatcher {
   override def matches(v: String): Boolean = (value.toString == v)
 }
-case class IntValueMatcher(val value: Int) extends SimpleValueMatcher(value)
-case class BooleanValueMatcher(val value: Boolean) extends SimpleValueMatcher(value)
-case class StringValueMatcher(val value: String) extends SimpleValueMatcher(value)
+case class IntValueMatcher(value: Int) extends SimpleValueMatcher(value)
+case class BooleanValueMatcher(value: Boolean) extends SimpleValueMatcher(value)
 
-case class ObjectValueMatcher(val value: Seq[Mapping]) extends ValueMatcher {
+case class StringValueMatcher(value: String) extends ValueMatcher {
+  override def matches(v: String): Boolean = value == v
+}
+
+case class ObjectValueMatcher(value: Seq[Mapping]) extends ValueMatcher {
   override def matches(v: String): Boolean = false
 }
 
