@@ -73,14 +73,8 @@ case class EvePlaceObject(p: IPlaceObject) extends EveObject {
 case class EveStructuredObject(o: MongoDBObject) extends EveObject {
   override def normalize() = o
 }
-//case class EveStructuredObjectList(a: List[EveObject]) extends EveObject {
+
 case class EveStructuredObjectList(a: Seq[EveObject]) extends EveObject {
   override def normalize() = a.map(_.normalize())
   override def toString() = a.mkString(", ")
-}
-
-case
-
-object EveConversion {
-  //implicit def EveStructuredObjectList2EveNumberObject(value: EveStructuredObjectList) = new EveNumberObject(value.a.length)
 }

@@ -10,7 +10,6 @@ import com.mongodb.DBObject
   */
 trait EveReceiver {
   def initReceiver(): Unit
-  def canHandle(o: DBObject): Boolean
   def handleMessage(message: Message)
   def destroyReceiver(): Unit
   def getMappings(): Seq[Mapping]
@@ -26,12 +25,6 @@ class EveDBReceiver(val mappings: Seq[Mapping]) extends Thread with EveReceiver 
     while(running){
 
     }
-  }
-
-  override def canHandle(o: DBObject): Boolean = mappings.forall { pair =>
-    val key = pair._1
-    val matcher = pair._2
-    o.containsField(key) && matcher.matches(Option(o.get(key)).map(_.toString).orNull)
   }
 
   override def handleMessage(message: Message): Unit = {

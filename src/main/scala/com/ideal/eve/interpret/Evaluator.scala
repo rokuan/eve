@@ -5,12 +5,12 @@ import java.util.Locale
 import com.ideal.eve.controller.Translator
 import com.ideal.eve.db.{EveDatabase, Writer}
 import com.ideal.eve.server.EveSession
-import com.rokuan.calliopecore.sentence.{IAction, ActionObject}
+import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{VerbalGroup, UnitObject, LanguageObject, NameObject}
-import com.rokuan.calliopecore.sentence.structure.{OrderObject, AffirmationObject, QuestionObject, InterpretationObject}
-import com.ideal.eve.universe.{ActionMessage, World}
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{LanguageObject, NameObject, UnitObject, VerbalGroup}
+import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, InterpretationObject, OrderObject, QuestionObject}
+import com.ideal.eve.universe.{ActionMessage, DBObjectValueSource, World}
 
 /**
   * Created by Christophe on 10/10/2015.
@@ -136,11 +136,11 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
             val dest = database.findObject(context, order.getDirectObject, true)
             dest.map(target => target match {
               case EveStructuredObject(o) => {
-                World.findReceiver(o.underlying).map(r => r.handleMessage(ActionMessage(actionType)))
+                World.findReceiver(DBObjectValueSource(o)).map(r => r.handleMessage(ActionMessage(actionType)))
               }
               case EveStructuredObjectList(os) => {
                 os.collect { case EveStructuredObject(o) => o }
-                    .flatMap { o => World.findReceiver(o.underlying) }
+                    .flatMap { o => World.findReceiver(DBObjectValueSource(o)) }
                     .map(r => r.handleMessage(ActionMessage(actionType)))
               }
             })

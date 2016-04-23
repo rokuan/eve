@@ -3,38 +3,36 @@ package com.ideal.eve.universe.route
 import com.ideal.eve.universe.ValueMatcher
 
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 /**
   * Created by Christophe on 17/04/2016.
   */
 class State[T](val name: String) {
-  val next = collection.mutable.Map[ValueMatcher, ListBuffer[State[T]]]()
+  val next = collection.mutable.Map[ValueMatcher, collection.mutable.Set[State[T]]]()
   val objects = new ListBuffer[T]
-  var count = 0
 
   def addNext(m: ValueMatcher, s: State[T]) = {
-    next.get(m).map { _.append(s) }
-      .getOrElse {
-        val followers = new ListBuffer[State[T]]
-        followers.append(s)
-        next.put(m, followers)
-      }
-    count += 1
+    next.getOrElseUpdate(m, collection.mutable.Set[State[T]]()).add(s)
   }
 
-  def getNext(): Iterable[(ValueMatcher, ListBuffer[State[T]])]
+  def removeNext(m: ValueMatcher, s: State[T]) = {
+    next.get(m).map { states =>
+      states -= s
+      if(states.isEmpty) next.remove(m)
+    }
+  }
+
+  def getNext(): Iterable[(ValueMatcher, collection.mutable.Set[State[T]])] = next
+  def getTerminalNext(m: ValueMatcher): Option[State[T]] = Try(next.get(m).get.head).toOption
 
   def addTerminal(o: T) = objects += o
   def removeTerminal(o: T) = objects -= o
   def clearTerminals() = objects.clear
   def isTerminal() = !objects.isEmpty
   def getResult(): Option[T] = if(isTerminal()) Option(objects(0)) else None
-  def getCount() = count
-
-  def run(v: String) = {
-    val matchingFollowers = next.find(_._1.matches(v)).map(_._2)
-    matchingFollowers.getOrElse(new ListBuffer[State[T]]())
-  }
+  def getCount() = next.size
+  def isEmpty() = next.isEmpty
 
   override def equals(obj: scala.Any): Boolean = {
     obj match {
@@ -43,4 +41,9 @@ class State[T](val name: String) {
       case _ => false
     }
   }
+}
+
+object State {
+  val TerminalStateName = "_"
+  val FinalStateName = "*"
 }
