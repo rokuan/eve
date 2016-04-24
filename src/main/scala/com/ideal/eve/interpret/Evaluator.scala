@@ -5,6 +5,7 @@ import java.util.Locale
 import com.ideal.eve.controller.Translator
 import com.ideal.eve.db.{EveDatabase, Writer}
 import com.ideal.eve.server.EveSession
+import com.ideal.eve.universe.concurrent.TaskPool
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
@@ -90,44 +91,6 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
           }
         }
 
-        case ActionType.CONVERT => {
-          val unit = order.getWayAdverbial match {
-            case u: UnitObject => u.unitType
-            case _ => throw new RuntimeException("Cannot convert to unspecified unit")
-          }
-
-          val quantityToConvert = database.findObject(context, order.getDirectObject)
-          quantityToConvert.map(result => {
-            result match {
-              case EveStructuredObject(o) if o.getAs[String](EveDatabase.ClassKey).getOrElse("") == Writer.UnitObjectType.getName =>
-                // TODO:
-                new EveStructuredObject(null)
-              case _ => throw new RuntimeException("Only units can be converted")
-            }
-          })
-        }
-
-        case ActionType.TRANSLATE => {
-          val language = order.getWayAdverbial match {
-            case l: LanguageObject => l.language.getLanguageCode
-            case _ => Locale.getDefault.getLanguage
-          }
-
-          val textToTranslate = database.findObject(context, order.getDirectObject)
-          textToTranslate.map(result => {
-            result match {
-              case EveStringObject(text) => new EveStringObject(Translator.translate(text, language))
-              case EveStructuredObjectList(objects) =>
-                val translations = objects.collect { case EveStringObject(s) => s }.map(text => new EveStringObject(Translator.translate(text, language)))
-                new EveStructuredObjectList(translations)
-            }
-          })
-        }
-
-        case ActionType.SEND => {
-
-        }
-
         case _ => {
           // TODO:
           if (order.getDirectObject == null && order.getTarget == null) {
@@ -135,22 +98,21 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
           } else if (order.getTarget == null) {
             val dest = database.findObject(context, order.getDirectObject, true)
             dest.map(target => target match {
-              case EveStructuredObject(o) => {
-                World.findReceiver(DBObjectValueSource(o)).map(r => r.handleMessage(ActionMessage(actionType)))
-              }
+              case EveStructuredObject(o) => TaskPool.scheduleDelayedTask(List(DBObjectValueSource(o)), ActionMessage(actionType))
               case EveStructuredObjectList(os) => {
-                os.collect { case EveStructuredObject(o) => o }
-                    .flatMap { o => World.findReceiver(DBObjectValueSource(o)) }
-                    .map(r => r.handleMessage(ActionMessage(actionType)))
+                val objects = os.collect { case EveStructuredObject(o) => DBObjectValueSource(o) }.toList
+                TaskPool.scheduleDelayedTask(objects, ActionMessage(actionType)), order.when)
               }
             })
           } else {
             val what = database.findObject(context, order.getDirectObject, true)
-            val to = database.findObject(context, order.getTarget, true)
+            val to = database.findObject(context, order.getTarget)
 
-            what.map(src =>
+            what.map { src =>
               to.map(target => target)
-            )
+            }
+
+
           }
         }
       }
