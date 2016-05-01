@@ -2,16 +2,16 @@ package com.ideal.eve.interpret
 
 import java.util.Locale
 
-import com.ideal.eve.controller.Translator
 import com.ideal.eve.db.{EveDatabase, Writer}
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.concurrent.TaskPool
+import com.ideal.eve.universe.receivers.Translator
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{LanguageObject, NameObject, UnitObject, VerbalGroup}
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, InterpretationObject, OrderObject, QuestionObject}
-import com.ideal.eve.universe.{ActionMessage, DBObjectValueSource, World}
+import com.ideal.eve.universe.{ActionEveMessage, DBObjectValueSource, World}
 
 /**
   * Created by Christophe on 10/10/2015.
@@ -98,10 +98,10 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
           } else if (order.getTarget == null) {
             val dest = database.findObject(context, order.getDirectObject, true)
             dest.map(target => target match {
-              case EveStructuredObject(o) => TaskPool.scheduleDelayedTask(List(DBObjectValueSource(o)), ActionMessage(actionType))
+              case EveStructuredObject(o) => TaskPool.scheduleDelayedTask(actionType, List(DBObjectValueSource(o)), order.when)
               case EveStructuredObjectList(os) => {
                 val objects = os.collect { case EveStructuredObject(o) => DBObjectValueSource(o) }.toList
-                TaskPool.scheduleDelayedTask(objects, ActionMessage(actionType)), order.when)
+                TaskPool.scheduleDelayedTask(actionType, objects, order.when)
               }
             })
           } else {
@@ -111,8 +111,6 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
             what.map { src =>
               to.map(target => target)
             }
-
-
           }
         }
       }

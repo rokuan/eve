@@ -10,13 +10,13 @@ import com.mongodb.DBObject
   */
 trait EveReceiver {
   def initReceiver(): Unit
-  def handleMessage(message: Message)
+  def handleMessage(message: EveMessage)
   def destroyReceiver(): Unit
   def getMappings(): Seq[Mapping]
 }
 
 class EveDBReceiver(val mappings: Seq[Mapping]) extends Thread with EveReceiver {
-  private val messagesQueue = new ConcurrentLinkedQueue[Message]()
+  private val messagesQueue = new ConcurrentLinkedQueue[EveMessage]()
   private var running = true
 
   override def initReceiver(): Unit = {}
@@ -27,7 +27,7 @@ class EveDBReceiver(val mappings: Seq[Mapping]) extends Thread with EveReceiver 
     }
   }
 
-  override def handleMessage(message: Message): Unit = {
+  override def handleMessage(message: EveMessage): Unit = {
 
   }
 

@@ -2,6 +2,7 @@ package com.ideal.eve.utils
 
 import java.util.{Calendar, Date}
 
+import com.rokuan.calliopecore.sentence.structure.content.ITimeObject
 import com.rokuan.calliopecore.sentence.structure.data.time.TimeAdverbial.DateDefinition
 import com.rokuan.calliopecore.sentence.structure.data.time.{RelativeTimeObject, SingleTimeObject, TimeAdverbial}
 
@@ -9,7 +10,7 @@ import com.rokuan.calliopecore.sentence.structure.data.time.{RelativeTimeObject,
   * Created by Christophe on 24/04/2016.
   */
 object TimeObjectConversions {
-  implicit def timeObjectToDate(t: TimeAdverbial): Date = {
+  implicit def timeObjectToDate(t: ITimeObject): Date = {
     t match {
       case s: SingleTimeObject =>
         val result = Calendar.getInstance()
@@ -26,6 +27,7 @@ object TimeObjectConversions {
         result.getTime
 
       case r: RelativeTimeObject => r.getDate
+      case _ => Calendar.getInstance().getTime
     }
   }
 

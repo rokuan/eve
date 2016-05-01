@@ -33,6 +33,7 @@ case class StringValueSource(s: String) extends ValueSource {
 }
 
 case class ObjectValueSource(o: ObjectMap) extends ValueSource {
+  def this(values: (String, ValueSource)*) = this(Map[String, ValueSource](values: _*))
   override def isObject(): Boolean = true
   override def getObject(): ObjectMap = o
 }
@@ -43,6 +44,12 @@ case object NullValueSource extends ValueSource {
 
 object ValueSource {
   type ObjectMap = Map[String, ValueSource]
+
+  implicit def stringToValueSource(s: String): StringValueSource = StringValueSource(s)
+
+  val ActionKey = "action"
+  val WhatKey = "what"
+  val HowKey = "how"
 }
 
 

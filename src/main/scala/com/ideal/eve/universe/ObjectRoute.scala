@@ -27,6 +27,8 @@ case class StringValueMatcher(value: String) extends ValueMatcher {
 }
 
 case class ObjectValueMatcher(value: Seq[Mapping]) extends ValueMatcher {
+  def this(m: Mapping) = this(m: _*)
+
   override def matches(v: ValueSource): Boolean =
     v.isObject() && {
       val o = v.getObject()
@@ -34,11 +36,21 @@ case class ObjectValueMatcher(value: Seq[Mapping]) extends ValueMatcher {
     }
 }
 
+case object AnyValueMatcher extends ValueMatcher {
+  override def matches(v: ValueSource): Boolean = !v.isNull()
+}
+
 class ObjectRoute(val mappings: Seq[Mapping])
 
 object ValueMatcher {
   type Mapping = (String, ValueMatcher)
 
+  implicit def stringToValueMatcher(s: String) =
+    if(s == "")
+      AnyValueMatcher
+    else
+      StringValueMatcher(s)
+  /*
   def apply(v: Any): ValueMatcher = {
     v match {
       case null => NullValueMatcher
@@ -47,5 +59,5 @@ object ValueMatcher {
       case s: Seq[_] => OrValueMatcher(s.map(ValueMatcher(_)).toArray)
       case _ => StringValueMatcher(v.toString)
     }
-  }
+  }*/
 }
