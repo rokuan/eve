@@ -1,5 +1,6 @@
 package com.ideal.eve.universe
 
+import com.ideal.eve.interpret._
 import com.mongodb.casbah.commons.MongoDBObject
 
 /**
@@ -21,5 +22,15 @@ object DBObjectValueSource {
       (k, v)
     }.toMap
     ObjectValueSource(pairs)
+  }
+}
+
+object EveObjectValueSource {
+  def apply(o: EveObject): ValueSource = o match {
+    case null => NullValueSource
+    case EveBooleanObject(b) => BooleanValueSource(b)
+    case EveNumberObject(n) => NumberValueSource(n)
+    case EveStringObject(s) => StringValueSource(s)
+    case EveStructuredObject(o) => DBObjectValueSource(o)
   }
 }

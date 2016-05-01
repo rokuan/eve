@@ -27,7 +27,7 @@ case class StringValueMatcher(value: String) extends ValueMatcher {
 }
 
 case class ObjectValueMatcher(value: Seq[Mapping]) extends ValueMatcher {
-  def this(m: Mapping) = this(m: _*)
+  def this(m: Mapping) = this(Seq(m))
 
   override def matches(v: ValueSource): Boolean =
     v.isObject() && {

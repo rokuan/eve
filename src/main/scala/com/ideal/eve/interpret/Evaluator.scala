@@ -5,13 +5,12 @@ import java.util.Locale
 import com.ideal.eve.db.{EveDatabase, Writer}
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.concurrent.TaskPool
-import com.ideal.eve.universe.receivers.Translator
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{LanguageObject, NameObject, UnitObject, VerbalGroup}
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, InterpretationObject, OrderObject, QuestionObject}
-import com.ideal.eve.universe.{ActionEveMessage, DBObjectValueSource, World}
+import com.ideal.eve.universe._
 
 /**
   * Created by Christophe on 10/10/2015.
@@ -76,9 +75,24 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
 
   protected def evalOrder(order: OrderObject)(implicit session: EveSession) = {
     val action: IAction = order.getAction.getMainAction
-    val actionType = action.getAction
+    //val actionType = action.getAction
 
-    if(action.isStateBound) {
+    val what = database.findObject(context, order.getDirectObject).map { w =>
+      w match {
+        case EveStructuredObject(o) => List(DBObjectValueSource(o))
+        case EveStructuredObjectList(os) => os.collect { case o => EveObjectValueSource(o) }.toList
+      }
+    }.getOrElse(List[ValueSource]())
+
+    val where = NullValueSource // TODO:
+
+    val target = database.findObject(context, order.getTarget).map {
+      case EveStructuredObject(o) => DBObjectValueSource(o)
+    }.getOrElse(NullValueSource)
+
+    TaskPool.scheduleDelayedTask(action, what, order.when, order.how, target)
+
+    /*if(action.isStateBound) {
       val stateKey = action.getBoundState
       val stateValue = action.getState
       database.updateState(context, order.getDirectObject, stateKey, stateValue)
@@ -114,6 +128,6 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
           }
         }
       }
-    }
+    }*/
   }
 }
