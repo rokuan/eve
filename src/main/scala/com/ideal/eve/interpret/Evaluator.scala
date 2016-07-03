@@ -1,14 +1,11 @@
 package com.ideal.eve.interpret
 
-import java.util.Locale
-
-import com.ideal.eve.db.{EveDatabase, Writer}
+import com.ideal.eve.db.{EveDatabase}
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.concurrent.TaskPool
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{LanguageObject, NameObject, UnitObject, VerbalGroup}
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, InterpretationObject, OrderObject, QuestionObject}
 import com.ideal.eve.universe._
 
