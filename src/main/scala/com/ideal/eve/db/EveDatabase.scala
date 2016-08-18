@@ -114,16 +114,16 @@ class EveDatabase {
   def set(context: EveContext, left: INominalObject, field: String, value: INominalObject)(implicit session: EveSession) = {
     TransactionManager.inTransaction[Unit] {
       transaction => {
-        val valueObject = findObject(context, value).get
+        val subjectObject = findSubject(context, left)
+        val valueObject = findObject(context, value)
 
-        findSubject(context, left).map { obj: EveObject =>
-          obj match {
+        subjectObject.map {
             case EveStructuredObject(o) => {
-              o += (field.toLowerCase -> valueObject.normalize())
+              o += (field.toLowerCase -> valueObject.get.normalize())
               transaction(objectCollectionName) += o
             }
             case EveStructuredObjectList(os) => {
-              valueObject match {
+              valueObject.map {
                 case EveStructuredObjectList(vs) if os.length >= vs.length => {
                   os.zip(vs).foreach(p => {
                     val o = p._1.asInstanceOf[EveStructuredObject].o
@@ -132,8 +132,8 @@ class EveDatabase {
                     transaction(objectCollectionName) += o
                   })
                 }
-                case _ => {
-                  val v = valueObject.normalize()
+                case a => {
+                  val v = a.normalize()
                   os.foreach(elem => {
                     val o = elem.asInstanceOf[EveStructuredObject].o
                     o += (field.toLowerCase -> v)
@@ -147,7 +147,6 @@ class EveDatabase {
             }
           }
         }
-      }
     }
   }
 
