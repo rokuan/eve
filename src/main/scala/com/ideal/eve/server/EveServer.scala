@@ -89,7 +89,7 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
   override def close(): Unit = stop
 }
 
-class EveUser(val session: EveSession, val socket: Socket) extends Thread {
+class EveUser(implicit val session: EveSession, val socket: Socket) extends Thread {
   val evaluator = Evaluator()
 
   override def run(): Unit = {
@@ -119,7 +119,7 @@ class EveUser(val session: EveSession, val socket: Socket) extends Thread {
           }
 
           val obj = InterpretationObject.fromJSON(json.toString)
-          println(evaluator.eval(obj)(session))
+          println(evaluator.eval(obj))
         }
       } catch {
         case e: Throwable => {

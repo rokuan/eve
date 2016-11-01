@@ -2,10 +2,11 @@ package com.ideal.eve.interpret
 
 import com.google.gson.Gson
 import com.ideal.eve.server.EveSession
+import com.ideal.evecore.interpreter.Context
 import com.mongodb.casbah.MongoDB
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
-import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, ITimeObject, IPlaceObject}
+import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, IPlaceObject, ITimeObject}
 import com.mongodb.casbah.query.Imports._
 
 import scala.util.Try
@@ -20,8 +21,7 @@ object EveContext {
   val CalliopeGroupKey = "calliope_object_type"
 }
 
-//class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
-class EveContext(val db: MongoDB) extends Context[EveObject, MongoDBObject] {
+class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
   import EveContext._
 
   protected val objectCollection = db(ContextDbName)

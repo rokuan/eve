@@ -58,5 +58,6 @@
     <orderEntry type="library" name="SBT: com.jsuereth:scala-arm_2.11:2.0.0-M1:jar" level="project" />
     <orderEntry type="library" name="calliope-core" level="project" />
     <orderEntry type="library" name="scala-sdk-2.11.7" level="application" />
+    <orderEntry type="library" name="evecore_2.11-1.0" level="project" />
   </component>
 </module>

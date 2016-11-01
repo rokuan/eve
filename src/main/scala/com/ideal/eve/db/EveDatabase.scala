@@ -4,15 +4,18 @@ import com.ideal.eve.server.EveSession
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
-import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.{CountType, ArticleType}
+import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.{ArticleType, CountType}
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
-import com.rokuan.calliopecore.sentence.structure.data.place.{PlaceObject, AdditionalPlace, NamedPlaceObject, LocationObject}
+import com.rokuan.calliopecore.sentence.structure.data.place.{AdditionalPlace, LocationObject, NamedPlaceObject, PlaceObject}
 import com.rokuan.calliopecore.sentence.structure.data.time.SingleTimeObject
 import com.rokuan.calliopecore.sentence.{INameInfo, IPronoun}
-import com.rokuan.calliopecore.sentence.structure.content.{IVerbalObject, INominalObject}
+import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, IVerbalObject}
 import com.ideal.eve.interpret._
+import com.ideal.evecore.interpreter._
+import com.ideal.evecore.io.Writer
+import EveObjectConverters._
 
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 /**
   * Created by Christophe on 04/10/2015.
@@ -43,41 +46,37 @@ object EveDatabase {
   def notImplementedYet = throw new RuntimeException("Not implemented yet")
 }
 
-class EveDatabase {
+class EveDatabase extends Storage[MongoDBObject] {
   import EveDatabase._
 
   val objectsCollection: MongoCollection = db(objectCollectionName)
   val typesCollection: MongoCollection = db(typeCollectionName)
 
-  def update(context: EveContext, left: INominalObject, value: INominalObject)(implicit session: EveSession) = {
+
+
+  def check(context: Context[MongoDBObject], condition: IVerbalObject)(implicit session: EveSession) = {
 
   }
 
-  def check(context: EveContext, condition: IVerbalObject)(implicit session: EveSession) = {
-
-  }
-
-  private def checkState(context: EveContext, source: INominalObject, key: String, value: String)(implicit session: EveSession): Try[EveObject] = {
+  private def checkState(context: Context[MongoDBObject], source: INominalObject, key: String, value: String)(implicit session: EveSession): Try[EveObject] = {
     val target = findObject(context, source)
 
     Try {
-      target.map { obj =>
-        obj match {
-          case _: EveStructuredObject => new EveBooleanObject(matchesState(obj, key, value))
-          case EveStructuredObjectList(os) => new EveBooleanObject(os.forall(matchesState(_, key, value)))
-          case _ => new EveBooleanObject(false)
-        }
+      target.map {
+        case o: EveStructuredObject => new EveBooleanObject(matchesState(o, key, value))
+        case EveObjectList(os) => new EveBooleanObject(os.forall(matchesState(_, key, value)))
+        case _ => new EveBooleanObject(false)
       }.getOrElse(new EveBooleanObject(false))
     }
   }
 
-  def updateState(context: EveContext, source: INominalObject, key: String, value: String)(implicit session: EveSession): Unit = {
+  def updateState(context: Context[MongoDBObject], source: INominalObject, key: String, value: String)(implicit session: EveSession): Unit = {
     val target = findObject(context, source)
 
     target.map { obj =>
       obj match {
         case _: EveStructuredObject => updateState(obj, key, value)
-        case EveStructuredObjectList(os) => os.foreach(updateState(_, key, value))
+        case EveObjectList(os) => os.foreach(updateState(_, key, value))
         case _ =>
       }
     }
@@ -85,7 +84,7 @@ class EveDatabase {
 
   private def getState(source: EveObject, key: String)(implicit session: EveSession): Option[String] = {
     source match {
-      case EveStructuredObject(o) => o.getAs[DBObject](StateKey).flatMap(_.getAs[String](key))
+      case EveStructuredObject(o) => Try(o(StateKey).asInstanceOf[EveStructuredObject].o(key).toString).toOption
       case _ => None
     }
   }
@@ -94,12 +93,13 @@ class EveDatabase {
 
   private def updateState(source: EveObject, key: String, value: String): Unit = {
     source match {
-      case EveStructuredObject(o) => {
+      case o: EveStructuredObject => {
         TransactionManager.inTransaction { transaction =>
           // TODO: appeler le manager en charge de l'objet, qui validera le changement d'etat
-          createStateIfNotExists(o)
-          o(StateKey).asInstanceOf[DBObject](key) = value
-          transaction(objectCollectionName) += o
+          val dbObject: MongoDBObject = o
+          createStateIfNotExists(dbObject)
+          dbObject(StateKey).asInstanceOf[DBObject](key) = value
+          transaction(objectCollectionName) += dbObject
         }
       }
     }
@@ -111,50 +111,48 @@ class EveDatabase {
     }
   }
 
-  def set(context: EveContext, left: INominalObject, field: String, value: INominalObject)(implicit session: EveSession) = {
+  def setWithSession(context: Context[MongoDBObject], left: INominalObject, field: String, value: INominalObject)(implicit session: EveSession) = {
+    import EveObjectConverters._
     TransactionManager.inTransaction[Unit] {
       transaction => {
-        val subjectObject = findSubject(context, left)
-        val valueObject = findObject(context, value)
-
-        subjectObject.map {
-            case EveStructuredObject(o) => {
-              o += (field.toLowerCase -> valueObject.get.normalize())
-              transaction(objectCollectionName) += o
+        for {
+          subject <- findSubject(context, left)
+          value <- findObject(context, value)
+        } yield {
+          (subject, value) match {
+            case (o: EveStructuredObject, _) => {
+              val dbObject: MongoDBObject = o
+              dbObject += (field.toLowerCase -> EveObjectConverters.eveObjectToMongoDBObject(value))
+              transaction(objectCollectionName) += dbObject
             }
-            case EveStructuredObjectList(os) => {
-              valueObject.map {
-                case EveStructuredObjectList(vs) if os.length >= vs.length => {
-                  os.zip(vs).foreach(p => {
-                    val o = p._1.asInstanceOf[EveStructuredObject].o
-                    val v = p._2.normalize()
-                    o += (field.toLowerCase -> v)
-                    transaction(objectCollectionName) += o
-                  })
-                }
-                case a => {
-                  val v = a.normalize()
-                  os.foreach(elem => {
-                    val o = elem.asInstanceOf[EveStructuredObject].o
-                    o += (field.toLowerCase -> v)
-                    transaction(objectCollectionName) += o
-                  })
-                }
+            case (EveObjectList(os), EveObjectList(vs)) if os.length >= vs.length =>
+              os.zip(vs).collect {
+                case (so: EveStructuredObject, v) =>
+                  val o: MongoDBObject = so
+                  o += (field.toLowerCase -> eveObjectToMongoDBObject(v))
+                  transaction(objectCollectionName) += o
               }
-            }
-            case _ => {
-              // TODO:
+
+            case (EveObjectList(os), _) =>
+              os.collect {
+                case so: EveStructuredObject =>
+                  val o: MongoDBObject = so
+                  val v = eveObjectToMongoDBObject(value)
+                  o += (field.toLowerCase -> v)
+                  transaction(objectCollectionName) += o
+              }
+            case _ => // TODO:
             }
           }
         }
     }
   }
 
-  def set(context: EveContext, left: INominalObject, value: INominalObject) = {
+  def set(context: Context[MongoDBObject], left: INominalObject, value: INominalObject) = {
 
   }
 
-  def get() = {}
+  override def get() = {}
 
   def accessObject(obj: INominalObject) = {
     TransactionManager.inTransaction { transaction =>
@@ -162,7 +160,7 @@ class EveDatabase {
     }
   }
 
-  def findSubject(context: EveContext, src: INominalObject)(implicit session: EveSession): Try[EveObject] = {
+  /*def findSubject(context: Context[MongoDBObject], src: INominalObject)(implicit session: EveSession): Try[EveObject] = {
     src match {
       case pronoun: PronounSubject => findPronounSource(context, pronoun.pronoun)
       case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
@@ -185,36 +183,9 @@ class EveDatabase {
       case verbalGroup: VerbalGroup => notImplementedYet
       case _ => notImplementedYet
     }
-  }
+  }*/
 
-  def findObject(context: EveContext, src: INominalObject, createIfNeeded: Boolean = false)(implicit session: EveSession): Try[EveObject] = {
-    src match {
-      case abstractTarget: AbstractTarget => findAbstractTarget(context, abstractTarget)
-      case additionalPlace: AdditionalPlace => findAdditionalDataByCode(additionalPlace.place.getCode)
-      case char: CharacterObject => findCharacter(context, char)
-      case person: PersonObject => Try(new EveStringObject(person.name))
-      case city: CityObject => findCity(city)
-      case color: ColorObject => findColor(color)
-      case name: NameObject => findNameObject(context, name)
-      case country: CountryObject => findCountry(country)
-      case date: SingleTimeObject => Try(new EveTimeObject(date)) // TODO: voir quel type renvoyer (ITimeObject/Date)
-      case language: LanguageObject => findLanguage(language)
-      case location: LocationObject => notImplementedYet
-      case namedPlace: NamedPlaceObject => findNamedPlace(namedPlace)
-      //case number:  =>
-      case additionalObject: AdditionalObject => findAdditionalDataByCode(additionalObject.`object`.getCode)
-      case additionalPerson: AdditionalPerson => findAdditionalDataByCode(additionalPerson.person.getCode)
-      case phoneNumber: PhoneNumberObject => Try(new EveStructuredObject(Writer.write(phoneNumber)))
-      case placeType: PlaceObject => notImplementedYet
-      case pronounSubject: PronounSubject => resolvePronounSubject(context, pronounSubject)
-      case quantity: QuantityObject => Try(new EveStructuredObject(Writer.write(quantity)))
-      case unit: UnitObject => Try(new EveStructuredObject(Writer.write(unit)))
-      case verbalGroup: VerbalGroup => notImplementedYet
-      case _ => notImplementedYet
-    }
-  }
-
-  protected def findNameObject(context: EveContext, name: NameObject)(implicit session: EveSession): Try[EveObject] = {
+  /*protected def findNameObject(context: Context[MongoDBObject], name: NameObject)(implicit session: EveSession): Try[EveObject] = {
     /*(name.count.getType, name.count.definition) match {
       case (CountType.ALL, _) =>
     }*/
@@ -229,7 +200,7 @@ class EveDatabase {
           if(name.getNominalSecondObject == null){
             val query = MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase)
             findOneObject(query).map(o => o).get
-            // TODO: changer le type de valeurs du EveContext
+            // TODO: changer le type de valeurs du Context[MongoDBObject]
             //.getOrElse(new EveStructuredObject(Writer.write(context.findLastNominalObject(query))))
           } else {
             val from = findObject(context, name.getNominalSecondObject)
@@ -245,21 +216,21 @@ class EveDatabase {
         case ArticleType.DEMONSTRATIVE => notImplementedYet
       }
     }
-  }
+  }*/
 
-  private def findMyNameObject(context: EveContext, name: NameObject)(implicit session: EveSession) = {
+  private def findMyNameObject(context: Context[MongoDBObject], name: NameObject)(implicit session: EveSession) = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
     name.count.definition = ArticleType.DEFINITE
     name.setNominalSecondObject(pronoun)
     findNameObject(context, name).get
   }
 
-  private def findQuantityNameObject(context: EveContext, name: NameObject)(implicit session: EveSession) = {
+  private def findQuantityNameObject(context: Context[MongoDBObject], name: NameObject)(implicit session: EveSession) = {
     // TODO:
     notImplementedYet
   }
 
-  protected def findCharacter(context: EveContext, char: CharacterObject)(implicit session: EveSession): Try[EveObject] = {
+  protected def findCharacter(context: Context[MongoDBObject], char: CharacterObject)(implicit session: EveSession): Try[EveObject] = {
     val name = new NameObject() {
       count = char.count
       `object` = new INameInfo {
@@ -292,24 +263,24 @@ class EveDatabase {
     ClassKey -> Writer.CountryObjectType.getName,
     CountryObjectKey.Code -> country.country.getCountryCode))
 
-  protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(query).get) }
+  protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(query).get) }
 
-  protected def resolvePronounSubject(context: EveContext, pronounSubject: PronounSubject)(implicit session: EveSession): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
-  protected def findAbstractTarget(context: EveContext, abstractTarget: AbstractTarget)(implicit session: EveSession): Try[EveObject] = findPronounSource(context, abstractTarget.source)
+  protected def resolvePronounSubject(context: Context[MongoDBObject], pronounSubject: PronounSubject)(implicit session: EveSession): Try[EveObject] = findPronounSource(context, pronounSubject.pronoun)
+  protected def findAbstractTarget(context: Context[MongoDBObject], abstractTarget: AbstractTarget)(implicit session: EveSession): Try[EveObject] = findPronounSource(context, abstractTarget.source)
 
-  protected def findPronounSource(context: EveContext, pronoun: IPronoun)(implicit session: EveSession): Try[EveObject] = {
+  /*protected def findPronounSource(context: Context[MongoDBObject], pronoun: IPronoun)(implicit session: EveSession): Try[EveObject] = {
     pronoun.getSource match {
       case IPronoun.PronounSource.I => findObjectByAttribute(UserKey, session.username)
       case IPronoun.PronounSource.YOU => findObjectByKey(EveKey)
       case _ => notImplementedYet // TODO:
     }
-  }
+  }*/
 
   protected def queryObjectByType(t: String) = {
     val results = objectsCollection.find(MongoDBObject(TypeKey -> t))
     val objects = results.toList
     results.close
-    new EveStructuredObjectList(objects.map(EveObject(_)))
+    new EveObjectList(objects.map(EveObject.apply(_)))
     /*val objects = results.toStream
     results.close()
     new EveStructuredObjectStream(objects)*/
@@ -317,12 +288,12 @@ class EveDatabase {
   }
   protected def findObjectByKey(value: String) = findObjectByAttribute(ReservedKey, value)
   protected def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
-  protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { new EveStructuredObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
+  protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
 
   /*protected def getType(o: EveObject): EveType = {
     o match {
       case EveStructuredObject(content) => EveType(content.getAs[DBObject](TypeKey).get)
-      case EveStructuredObjectList(os) => getCommonSuperType(os.map(getType(_)))
+      case EveObjectList(os) => getCommonSuperType(os.map(getType(_)))
     }
   }
 
@@ -358,4 +329,56 @@ class EveDatabase {
 
     leftType
   }*/
+  override def update(context: Context[MongoDBObject], left: INominalObject, value: INominalObject): Unit = {}
+
+  override def set(context: Context[MongoDBObject], left: INominalObject, field: String, value: INominalObject): Unit = {}
+
+  override def findNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
+      /*(name.count.getType, name.count.definition) match {
+        case (CountType.ALL, _) =>
+      }*/
+      Try {
+        name.count.definition match {
+          case ArticleType.POSSESSIVE => {
+            // ma voiture => la voiture de moi
+            findMyNameObject(context, name)
+          }
+          case ArticleType.DEFINITE => {
+            // TODO:
+            if(name.getNominalSecondObject == null){
+              val query = MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase)
+              findOneObject(query).map(o => o).get
+              // TODO: changer le type de valeurs du Context[MongoDBObject]
+              //.getOrElse(new EveStructuredObject(Writer.write(context.findLastNominalObject(query))))
+            } else {
+              val from = findObject(context, name.getNominalSecondObject)
+              EveObject(from.get.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
+            }
+          }
+          case ArticleType.INDEFINITE => notImplementedYet
+          case ArticleType.NONE => {
+            // TODO: rajouter un type pour les personnes
+            val value = name.`object`.getValue
+            new EveStringObject(value)
+          }
+          case ArticleType.DEMONSTRATIVE => notImplementedYet
+        }
+      }
+    }
+
+  override def findSubject(context: Context[MongoDBObject], subject: INominalObject): Try[EveObject] = findObject(context, subject)
+
+  override def delete(context: Context[MongoDBObject], left: INominalObject, field: String, value: INominalObject): Unit = {}
+
+  override def delete(context: Context[MongoDBObject], left: INominalObject, value: INominalObject): Unit = {}
+
+  override def findCharacter(context: Context[MongoDBObject], char: CharacterObject): Try[EveObject] = null // TODO:
+
+  override def findLocation(location: LocationObject): Try[EveObject] = null  // TODO:
+
+  override def findPronounSource(context: Context[MongoDBObject], pronoun: IPronoun): Try[EveObject] = pronoun.getSource match {
+    case IPronoun.PronounSource.I => findObjectByAttribute(UserKey, session.username)
+    case IPronoun.PronounSource.YOU => findObjectByKey(EveKey)
+    case _ => notImplementedYet // TODO:
+  }
 }

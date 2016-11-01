@@ -1,6 +1,6 @@
 package com.ideal.eve.interpret
 
-import com.ideal.eve.db.{EveDatabase}
+import com.ideal.eve.db.EveDatabase
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.concurrent.TaskPool
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
@@ -8,6 +8,7 @@ import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, InterpretationObject, OrderObject, QuestionObject}
 import com.ideal.eve.universe._
+import com.ideal.evecore.interpreter.{EveObject, EveObjectList, EveStructuredObject}
 
 /**
   * Created by Christophe on 10/10/2015.
@@ -21,6 +22,8 @@ object Evaluator {
 }
 
 class Evaluator(val context: EveContext, val database: EveDatabase) {
+  implicit val session: EveSession
+
   def eval(obj: InterpretationObject)(implicit session: EveSession) = {
     obj match {
       case question: QuestionObject => evalQuestion(question)
@@ -77,7 +80,7 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
     val what = database.findObject(context, order.getDirectObject).map { w =>
       w match {
         case EveStructuredObject(o) => List(DBObjectValueSource(o))
-        case EveStructuredObjectList(os) => os.collect { case o => EveObjectValueSource(o) }.toList
+        case EveObjectList(os) => os.collect { case o => EveObjectValueSource(o) }.toList
       }
     }.getOrElse(List[ValueSource]())
 
@@ -110,7 +113,7 @@ class Evaluator(val context: EveContext, val database: EveDatabase) {
             val dest = database.findObject(context, order.getDirectObject, true)
             dest.map(target => target match {
               case EveStructuredObject(o) => TaskPool.scheduleDelayedTask(actionType, List(DBObjectValueSource(o)), order.when)
-              case EveStructuredObjectList(os) => {
+              case EveObjectList(os) => {
                 val objects = os.collect { case EveStructuredObject(o) => DBObjectValueSource(o) }.toList
                 TaskPool.scheduleDelayedTask(actionType, objects, order.when)
               }
