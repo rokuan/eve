@@ -8,7 +8,6 @@ import com.ideal.eve.server.EveServer
 object Main {
   def main(args: Array[String]) = {
     val server = EveServer()
-
     server.start()
   }
 }

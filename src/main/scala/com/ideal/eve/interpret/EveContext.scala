@@ -1,6 +1,7 @@
 package com.ideal.eve.interpret
 
 import com.google.gson.Gson
+import com.ideal.eve.db.EveDatabase
 import com.ideal.eve.server.EveSession
 import com.ideal.evecore.interpreter.Context
 import com.mongodb.casbah.MongoDB
@@ -19,6 +20,8 @@ object EveContext {
   private val ContextDbName = "eve_context"
 
   val CalliopeGroupKey = "calliope_object_type"
+
+  def apply() = new EveContext(EveDatabase.db)
 }
 
 class EveContext(val db: MongoDB) extends Context[MongoDBObject] {

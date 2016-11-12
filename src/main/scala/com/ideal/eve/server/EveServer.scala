@@ -1,16 +1,13 @@
 package com.ideal.eve.server
 
-import java.net.{Socket, ServerSocket}
-import java.util.Properties
+import java.net.{ServerSocket, Socket}
 
-/*import akka.actor.{ActorSystem, Props, Actor}
-import akka.actor.Actor.Receive*/
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
-import com.ideal.eve.interpret.Evaluator
+import com.ideal.eve.db.EveDatabase
+import com.ideal.eve.interpret.{EveContext, EveEvaluator}
 import com.rokuan.calliopecore.sentence.structure.InterpretationObject
 
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success}
 
 sealed trait EveServerMessage
@@ -59,7 +56,7 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
 
             EveAuth.login(login, password) match {
               case Success(l) => {
-                val user = new EveUser(new EveSession(login), client)
+                val user = new EveUser(client)(new EveSession(login))
                 val os = client.getOutputStream
                 os.write('Y')
                 os.flush()
@@ -89,8 +86,8 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
   override def close(): Unit = stop
 }
 
-class EveUser(implicit val session: EveSession, val socket: Socket) extends Thread {
-  val evaluator = Evaluator()
+class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread {
+  val evaluator = new EveEvaluator(EveContext())(session)
 
   override def run(): Unit = {
     var connected = true
