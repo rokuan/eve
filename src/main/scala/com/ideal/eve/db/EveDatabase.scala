@@ -21,8 +21,8 @@ import scala.util.Try
   */
 object EveDatabase {
   val db = MongoConnection()("eve_")
-  val objectCollectionName = "eve_data"
-  val typeCollectionName = "eve_types"
+  val ObjectCollectionName = "eve_data"
+  val TypeCollectionName = "eve_types"
 
   val IdKey = "_id"
 
@@ -37,6 +37,7 @@ object EveDatabase {
   val CodeKey = "__code"
   val ValueKey = "__value"
   val TypeKey = "__type"
+  val SuperTypesKey = "__superTypes"
   val UserKey = "__user"
   val StateKey = "__state"
 
@@ -48,8 +49,8 @@ object EveDatabase {
 class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObject] {
   import EveDatabase._
 
-  val objectsCollection: MongoCollection = db(objectCollectionName)
-  val typesCollection: MongoCollection = db(typeCollectionName)
+  val objectsCollection: MongoCollection = db(ObjectCollectionName)
+  val typesCollection: MongoCollection = db(TypeCollectionName)
 
   def check(context: Context[MongoDBObject], condition: IVerbalObject) = {
 
@@ -96,7 +97,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
           val dbObject: MongoDBObject = o
           createStateIfNotExists(dbObject)
           dbObject.getAs[MongoDBObject](StateKey).map(_(key) = value)
-          transaction(objectCollectionName) += dbObject
+          transaction(ObjectCollectionName) += dbObject
         }
       }
     }
@@ -119,14 +120,14 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
           case (o: EveStructuredObject, _) => {
             val dbObject: MongoDBObject = o
             dbObject += (field.toLowerCase -> EveObjectConverters.eveObjectToMongoDBObject(value))
-            transaction(objectCollectionName) += dbObject
+            transaction(ObjectCollectionName) += dbObject
           }
           case (EveObjectList(os), EveObjectList(vs)) if os.length >= vs.length =>
             os.zip(vs).collect {
               case (so: EveStructuredObject, v) =>
                 val o: MongoDBObject = so
                 o += (field.toLowerCase -> eveObjectToMongoDBObject(v))
-                transaction(objectCollectionName) += o
+                transaction(ObjectCollectionName) += o
             }
 
           case (EveObjectList(os), _) =>
@@ -135,7 +136,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
                 val o: MongoDBObject = so
                 val v = eveObjectToMongoDBObject(value)
                 o += (field.toLowerCase -> v)
-                transaction(objectCollectionName) += o
+                transaction(ObjectCollectionName) += o
             }
           case _ => // TODO:
         }
@@ -146,39 +147,6 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   override def set(context: Context[MongoDBObject], left: INominalObject, value: INominalObject) = {
 
   }
-
-  /*protected def findNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
-    /*(name.count.getType, name.count.definition) match {
-      case (CountType.ALL, _) =>
-    }*/
-    Try {
-      name.count.definition match {
-        case ArticleType.POSSESSIVE => {
-          // ma voiture => la voiture de moi
-          findMyNameObject(context, name)
-        }
-        case ArticleType.DEFINITE => {
-          // TODO:
-          if(name.getNominalSecondObject == null){
-            val query = MongoDBObject(TypeKey -> name.`object`.getNameTag.toLowerCase)
-            findOneObject(query).map(o => o).get
-            // TODO: changer le type de valeurs du Context[MongoDBObject]
-            //.getOrElse(new EveStructuredObject(Writer.write(context.findLastNominalObject(query))))
-          } else {
-            val from = findObject(context, name.getNominalSecondObject)
-            EveObject(from.get.asInstanceOf[EveStructuredObject].o(name.`object`.getNameTag))
-          }
-        }
-        case ArticleType.INDEFINITE => notImplementedYet
-        case ArticleType.NONE => {
-          // TODO: rajouter un type pour les personnes
-          val value = name.`object`.getValue
-          new EveStringObject(value)
-        }
-        case ArticleType.DEMONSTRATIVE => notImplementedYet
-      }
-    }
-  }*/
 
   private def findMyNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
@@ -210,14 +178,6 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
 
   protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(query).get) }
 
-  /*protected def findPronounSource(context: Context[MongoDBObject], pronoun: IPronoun): Try[EveObject] = {
-    pronoun.getSource match {
-      case IPronoun.PronounSource.I => findObjectByAttribute(UserKey, session.username)
-      case IPronoun.PronounSource.YOU => findObjectByKey(EveKey)
-      case _ => notImplementedYet // TODO:
-    }
-  }*/
-
   protected def queryObjectByType(t: String) = {
     val results = objectsCollection.find(MongoDBObject(TypeKey -> t))
     val objects = results.toList
@@ -232,46 +192,6 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   override def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
   protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
 
-  /*protected def getType(o: EveObject): EveType = {
-    o match {
-      case EveStructuredObject(content) => EveType(content.getAs[DBObject](TypeKey).get)
-      case EveObjectList(os) => getCommonSuperType(os.map(getType(_)))
-    }
-  }
-
-  protected def getCommonSuperType(types: Seq[EveType]): EveType = {
-    val distinctTypes = types.distinct
-    if(distinctTypes.length > 0){
-      // Should not happen
-      EveType.RootType
-    } else {
-      distinctTypes.foldLeft(distinctTypes(0)) { (t1, t2) => getCommonSuperType(t1, t2) }
-    }
-  }
-
-  protected def getCommonSuperType(t1: EveType, t2: EveType): EveType = {
-    // TODO: find the smallest common type
-    def getSuperType(t: EveType) = {
-      val result = typesCollection.findOne(MongoDBObject("name" -> t.name)).get.getAs[DBObject]("parent").get
-      EveType(result)
-    }
-
-    var leftType = t1
-    var rightType = t2
-
-    while (!leftType.equals(rightType)) {
-      while (leftType.level > rightType.level) {
-        leftType = getSuperType(leftType)
-      }
-
-      while (rightType.level > leftType.level) {
-        rightType = getSuperType(rightType)
-      }
-    }
-
-    leftType
-  }*/
-
   protected def getType(o: EveObject): EveType = {
     o match {
       case eso: EveStructuredObject => EveType(eso)
@@ -281,35 +201,77 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
 
   protected def getCommonSuperType(types: Seq[EveType]): EveType = {
     val distinctTypes = types.distinct
-    if(distinctTypes.length > 0){
-      // Should not happen
-      EveType.RootType
+    distinctTypes.foldLeft(distinctTypes.headOption) { case (acc, t) => acc.flatMap(getCommonSuperType(_, t)) }
+      .getOrElse(EveType.RootType)
+  }
+
+  protected def getCommonSuperType(t1: EveType, t2: EveType): Option[EveType] = {
+    if(t1.equals(t2)){
+      Some(t1)
     } else {
-      distinctTypes.foldLeft(distinctTypes(0)) { (t1, t2) => getCommonSuperType(t1, t2) }
+      val leftCheckedTypes = collection.mutable.Map[String, Boolean]()
+      val rightCheckedTypes = collection.mutable.Map[String, Boolean]()
+      val leftGroups = collection.mutable.Map[Int, List[EveType]]()
+      val rightGroups = collection.mutable.Map[Int, List[EveType]]()
+      var commonType: Option[EveType] = Option.empty[EveType]
+
+      def updateTypes(ts: List[EveType], destination: collection.mutable.Map[Int, List[EveType]],
+                      checked: collection.mutable.Map[String, Boolean]) = {
+        ts.collect {
+          case t if !checked.contains(t.name) =>
+            destination.get(t.level).map(oldValue => destination.put(t.level, t::oldValue))
+              .getOrElse(destination.put(t.level, List(t)))
+        }
+      }
+
+      def getNewSuperTypes(t: EveType, checked: collection.mutable.Map[String, Boolean]) = {
+        checked.put(t.name, true)
+        getSuperTypes(t).filter(t => !checked.contains(t.name))
+      }
+
+      updateTypes(List(t1), leftGroups, leftCheckedTypes)
+      updateTypes(List(t2), rightGroups, rightCheckedTypes)
+
+      while(commonType.isEmpty || (leftGroups.isEmpty || rightGroups.isEmpty)) {
+        val leftKeys = leftGroups.keySet
+        val rightKeys = rightGroups.keySet
+
+        if(!leftKeys.isEmpty || !rightKeys.isEmpty) {
+          val maxLevel = (leftKeys ++ rightKeys).max
+          val leftLevelTypes = leftGroups.get(maxLevel)
+          val rightLevelTypes = rightGroups.get(maxLevel)
+
+          if (!leftLevelTypes.isEmpty && !rightLevelTypes.isEmpty) {
+            commonType =
+              for {
+                leftSuperTypes <- leftGroups.get(maxLevel)
+                rightSuperTypes <- rightGroups.get(maxLevel)
+              } yield {
+                leftSuperTypes.intersect(rightSuperTypes).head
+              }
+          }
+
+          leftGroups.remove(maxLevel).map { oldTypes =>
+            val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, leftCheckedTypes))
+            updateTypes(newSuperTypes, leftGroups, leftCheckedTypes)
+          }
+          rightGroups.remove(maxLevel).map { oldTypes =>
+            val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, rightCheckedTypes))
+            updateTypes(newSuperTypes, rightGroups, rightCheckedTypes)
+          }
+        }
+      }
+
+      commonType
     }
   }
 
-  protected def getCommonSuperType(t1: EveType, t2: EveType): EveType = {
-    // TODO: find the smallest common type
-    def getSuperType(t: EveType) = {
-      val result = typesCollection.findOne(MongoDBObject("name" -> t.name)).get.getAs[DBObject]("parent").get
-      EveType(result)
-    }
-
-    var leftType = t1
-    var rightType = t2
-
-    while (!leftType.equals(rightType)) {
-      while (leftType.level > rightType.level) {
-        leftType = getSuperType(leftType)
-      }
-
-      while (rightType.level > leftType.level) {
-        rightType = getSuperType(rightType)
-      }
-    }
-
-    leftType
+  protected def getSuperTypes(t: EveType): List[EveType] = {
+    val typeCollection = db(TypeCollectionName)
+    typeCollection.find(MongoDBObject(TypeKey -> t.name))
+      .map(_.getAsOrElse[MongoDBList](SuperTypesKey, MongoDBList()))
+      .collect { case o: MongoDBObject => EveType(o) }
+      .toList
   }
 
   override def findNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
@@ -362,7 +324,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
         TransactionManager.inTransaction { t =>
           val dbObject: MongoDBObject = eso
           dbObject.remove(field)
-          t(objectCollectionName) += dbObject
+          t(ObjectCollectionName) += dbObject
         }
     }
   }
