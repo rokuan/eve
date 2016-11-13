@@ -269,7 +269,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   protected def getSuperTypes(t: EveType): List[EveType] = {
     val typeCollection = db(TypeCollectionName)
     typeCollection.find(MongoDBObject(TypeKey -> t.name))
-      .map(_.getAsOrElse[MongoDBList](SuperTypesKey, MongoDBList()))
+      .flatMap(_.getAsOrElse[MongoDBList](SuperTypesKey, MongoDBList()))
       .collect { case o: MongoDBObject => EveType(o) }
       .toList
   }
