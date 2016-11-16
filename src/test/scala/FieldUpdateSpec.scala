@@ -1,13 +1,14 @@
+import com.ideal.eve.interpret.{EveContext, EveEvaluator}
 import com.ideal.eve.server.EveSession
-import com.rokuan.calliopecore.sentence.IAction.{Tense, Form, ActionType}
+import com.ideal.evecore.interpreter.EveStringObject
+import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence._
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{PersonObject, NameObject, PronounSubject}
-import com.rokuan.calliopecore.sentence.structure.{QuestionObject, AffirmationObject}
-import com.ideal.eve.interpret.{EveStringObject, Evaluator}
-import org.scalatest.{Matchers, FlatSpec}
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PersonObject, PronounSubject}
+import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, QuestionObject}
+import org.scalatest.{FlatSpec, Matchers}
 
 /**
   * Created by Christophe on 25/10/2015.
@@ -63,10 +64,10 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     whatIsMyName.setAction(new ActionObject(Tense.PRESENT, is))
     whatIsMyName.setDirectObject(myName)
 
-    val evaluator = Evaluator()
     val mySession = new EveSession("chris")
-    evaluator.eval(myNameIsChristophe)(mySession)
-    val result = evaluator.eval(whatIsMyName)(mySession)
+    val evaluator = new EveEvaluator(EveContext())(mySession)
+    evaluator.eval(myNameIsChristophe)
+    val result = evaluator.eval(whatIsMyName)
     assert(result.isInstanceOf[EveStringObject])
     assert(result.asInstanceOf[EveStringObject].s == "Christophe")
   }

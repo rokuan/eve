@@ -38,6 +38,7 @@ object EveDatabase {
   val ValueKey = "__value"
   val TypeKey = "__type"
   val SuperTypesKey = "__superTypes"
+  val LevelKey = "__level"
   val UserKey = "__user"
   val StateKey = "__state"
 
@@ -195,83 +196,8 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   protected def getType(o: EveObject): EveType = {
     o match {
       case eso: EveStructuredObject => EveType(eso)
-      case EveObjectList(os) => getCommonSuperType(os.map(getType(_)))
+      case EveObjectList(os) => EveType.getCommonSuperType(os.map(getType(_)))
     }
-  }
-
-  protected def getCommonSuperType(types: Seq[EveType]): EveType = {
-    val distinctTypes = types.distinct
-    distinctTypes.foldLeft(distinctTypes.headOption) { case (acc, t) => acc.flatMap(getCommonSuperType(_, t)) }
-      .getOrElse(EveType.RootType)
-  }
-
-  protected def getCommonSuperType(t1: EveType, t2: EveType): Option[EveType] = {
-    if(t1.equals(t2)){
-      Some(t1)
-    } else {
-      val leftCheckedTypes = collection.mutable.Map[String, Boolean]()
-      val rightCheckedTypes = collection.mutable.Map[String, Boolean]()
-      val leftGroups = collection.mutable.Map[Int, List[EveType]]()
-      val rightGroups = collection.mutable.Map[Int, List[EveType]]()
-      var commonType: Option[EveType] = Option.empty[EveType]
-
-      def updateTypes(ts: List[EveType], destination: collection.mutable.Map[Int, List[EveType]],
-                      checked: collection.mutable.Map[String, Boolean]) = {
-        ts.collect {
-          case t if !checked.contains(t.name) =>
-            destination.get(t.level).map(oldValue => destination.put(t.level, t::oldValue))
-              .getOrElse(destination.put(t.level, List(t)))
-        }
-      }
-
-      def getNewSuperTypes(t: EveType, checked: collection.mutable.Map[String, Boolean]) = {
-        checked.put(t.name, true)
-        getSuperTypes(t).filter(t => !checked.contains(t.name))
-      }
-
-      updateTypes(List(t1), leftGroups, leftCheckedTypes)
-      updateTypes(List(t2), rightGroups, rightCheckedTypes)
-
-      while(commonType.isEmpty || (leftGroups.isEmpty || rightGroups.isEmpty)) {
-        val leftKeys = leftGroups.keySet
-        val rightKeys = rightGroups.keySet
-
-        if(!leftKeys.isEmpty || !rightKeys.isEmpty) {
-          val maxLevel = (leftKeys ++ rightKeys).max
-          val leftLevelTypes = leftGroups.get(maxLevel)
-          val rightLevelTypes = rightGroups.get(maxLevel)
-
-          if (!leftLevelTypes.isEmpty && !rightLevelTypes.isEmpty) {
-            commonType =
-              for {
-                leftSuperTypes <- leftGroups.get(maxLevel)
-                rightSuperTypes <- rightGroups.get(maxLevel)
-              } yield {
-                leftSuperTypes.intersect(rightSuperTypes).head
-              }
-          }
-
-          leftGroups.remove(maxLevel).map { oldTypes =>
-            val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, leftCheckedTypes))
-            updateTypes(newSuperTypes, leftGroups, leftCheckedTypes)
-          }
-          rightGroups.remove(maxLevel).map { oldTypes =>
-            val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, rightCheckedTypes))
-            updateTypes(newSuperTypes, rightGroups, rightCheckedTypes)
-          }
-        }
-      }
-
-      commonType
-    }
-  }
-
-  protected def getSuperTypes(t: EveType): List[EveType] = {
-    val typeCollection = db(TypeCollectionName)
-    typeCollection.find(MongoDBObject(TypeKey -> t.name))
-      .flatMap(_.getAsOrElse[MongoDBList](SuperTypesKey, MongoDBList()))
-      .collect { case o: MongoDBObject => EveType(o) }
-      .toList
   }
 
   override def findNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
@@ -313,7 +239,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
       case EveStringObject(field) => delete(context, left, field)
       case EveStructuredObject(o) => delete(context, left, getType(o).name)
       case EveObjectList(objects) =>
-        val commonType = getCommonSuperType(objects.map(getType(_)))
+        val commonType = EveType.getCommonSuperType(objects.map(getType(_)))
         delete(context, left, commonType.name)
     }
   }
