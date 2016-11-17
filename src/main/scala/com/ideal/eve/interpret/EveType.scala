@@ -3,6 +3,8 @@ package com.ideal.eve.interpret
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.query.Imports._
 
+import scala.annotation.tailrec
+
 /**
   * Created by Christophe on 06/12/2015.
   */
@@ -11,7 +13,6 @@ object EveType {
   val RootType = new EveType("__any", 0)
 
   def apply(o: MongoDBObject) = {
-    //val name = o.getAs[String]("name").get
     val name = o.getAs[String](TypeKey).get
     val level = o.getAs[Int](LevelKey).get
     new EveType(name, level)
@@ -27,14 +28,13 @@ object EveType {
     if(t1.equals(t2)){
       Some(t1)
     } else {
-      val leftCheckedTypes = collection.mutable.Map[String, Boolean]()
-      val rightCheckedTypes = collection.mutable.Map[String, Boolean]()
+      val leftCheckedTypes = collection.mutable.Set[String]()
+      val rightCheckedTypes = collection.mutable.Set[String]()
       val leftGroups = collection.mutable.Map[Int, List[EveType]]()
       val rightGroups = collection.mutable.Map[Int, List[EveType]]()
-      var commonType: Option[EveType] = Option.empty[EveType]
 
       def updateTypes(ts: List[EveType], destination: collection.mutable.Map[Int, List[EveType]],
-                      checked: collection.mutable.Map[String, Boolean]) = {
+                      checked: collection.mutable.Set[String]) = {
         ts.collect {
           case t if !checked.contains(t.name) =>
             destination.get(t.level).map(oldValue => destination.put(t.level, t::oldValue))
@@ -42,43 +42,48 @@ object EveType {
         }
       }
 
-      def getNewSuperTypes(t: EveType, checked: collection.mutable.Map[String, Boolean]) = {
-        checked.put(t.name, true)
+      def getNewSuperTypes(t: EveType, checked: collection.mutable.Set[String]) = {
+        checked.add(t.name)
         getSuperTypes(t).filter(ty => !checked.contains(ty.name))
       }
 
       updateTypes(List(t1), leftGroups, leftCheckedTypes)
       updateTypes(List(t2), rightGroups, rightCheckedTypes)
 
-      while(!commonType.isDefined && (!leftGroups.isEmpty && !rightGroups.isEmpty)) {
-        val leftKeys = leftGroups.keySet
-        val rightKeys = rightGroups.keySet
-
-        if(leftKeys.size >= 0 || rightKeys.size >= 0) {
+      @tailrec
+      def findCommonType(): Option[EveType] = {
+        if(leftGroups.isEmpty || rightGroups.isEmpty){
+          None
+        } else {
+          val leftKeys = leftGroups.keySet
+          val rightKeys = rightGroups.keySet
           val maxLevel = (leftKeys ++ rightKeys).max
-          val leftLevelTypes = leftGroups.get(maxLevel)
-          val rightLevelTypes = rightGroups.get(maxLevel)
 
-          if (leftLevelTypes.isDefined && rightLevelTypes.isDefined) {
-            val leftSuperTypes = leftGroups(maxLevel)
-            val rightSuperTypes = rightGroups(maxLevel)
-            commonType = leftSuperTypes.intersect(rightSuperTypes).headOption
-          }
-
-          if(!commonType.isDefined) {
-            leftGroups.remove(maxLevel).map { oldTypes =>
-              val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, leftCheckedTypes))
-              updateTypes(newSuperTypes, leftGroups, leftCheckedTypes)
+          val commonType =
+            for {
+              left <- leftGroups.get(maxLevel)
+              right <- rightGroups.get(maxLevel)
+              intersect <- left.intersect(right).headOption
+            } yield {
+              intersect
             }
-            rightGroups.remove(maxLevel).map { oldTypes =>
-              val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, rightCheckedTypes))
-              updateTypes(newSuperTypes, rightGroups, rightCheckedTypes)
-            }
+          commonType match {
+            case None =>
+              leftGroups.remove(maxLevel).map { oldTypes =>
+                val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, leftCheckedTypes))
+                updateTypes(newSuperTypes, leftGroups, leftCheckedTypes)
+              }
+              rightGroups.remove(maxLevel).map { oldTypes =>
+                val newSuperTypes = oldTypes.flatMap(getNewSuperTypes(_, rightCheckedTypes))
+                updateTypes(newSuperTypes, rightGroups, rightCheckedTypes)
+              }
+              findCommonType()
+            case _ => commonType
           }
         }
       }
 
-      commonType
+      findCommonType()
     }
   }
 
@@ -86,9 +91,8 @@ object EveType {
     val typeCollection = db(TypeCollectionName)
     typeCollection.findOne(MongoDBObject(TypeKey -> t.name))
       .map(_.getAsOrElse[MongoDBList](SuperTypesKey, MongoDBList()))
-      .map { l => l.map(o => EveType(o.asInstanceOf[BasicDBObject])) }
+      .map { l => l.map(o => EveType(o.asInstanceOf[BasicDBObject])).toList }
       .getOrElse(List())
-      .toList
   }
 }
 
