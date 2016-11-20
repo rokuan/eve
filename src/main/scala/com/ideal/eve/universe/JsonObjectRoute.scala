@@ -1,7 +1,7 @@
 package com.ideal.eve.universe
 
 import com.google.gson.{JsonElement, JsonObject}
-import com.ideal.eve.universe.ValueMatcher.Mapping
+import com.ideal.evecore.universe._
 
 import collection.JavaConversions._
 
@@ -30,7 +30,7 @@ object JsonObjectRoute {
   }
 
   def apply(o: JsonObject): ObjectValueMatcher = {
-    val mappings = o.entrySet().map(p => (p.getKey, JsonObjectRoute(p.getValue))).toSeq
+    val mappings = o.entrySet().map(p => (p.getKey -> JsonObjectRoute(p.getValue))).toMap
     ObjectValueMatcher(mappings)
   }
 }

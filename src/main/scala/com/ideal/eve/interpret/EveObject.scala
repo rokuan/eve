@@ -17,10 +17,11 @@ import com.mongodb.casbah.query.Imports._
 
 object EveObjectConverters {
   implicit def eveStructuredObjectToMongoDBObject(o: EveStructuredObject): MongoDBObject =
-    o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject : MongoDBObject
+    o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject
 
   implicit def eveObjectToMongoDBObject(o: EveObject): AnyRef = {
     o match {
+      case null => null
       case EveBooleanObject(b) => b
       case EveNumberObject(n) => n
       case EveStringObject(s) => s
@@ -33,19 +34,31 @@ object EveObjectConverters {
         val gson: Gson = FullGsonBuilder.getSerializationGsonBuilder.create()
         JSON.parse(gson.toJson(p, classOf[IPlaceObject])).asInstanceOf[MongoDBObject]
       }
-      case EveStructuredObject(o) => null // TODO: transform the mapping into a MongoDBObject
+      case o: EveStructuredObject => eveStructuredObjectToMongoDBObject(o)
       case EveObjectList(a) => MongoDBList(a.map(eveObjectToMongoDBObject(_)))
+      case EveObjectId(id) => id
     }
   }
 }
 
 object EveObjectConversions {
-  import EveObject._
-
-  implicit def mongoDBObjectToEveObject(o: Any): EveObject = Try(EveObject(o)).getOrElse {
+  implicit def dbObjectToEveObject(o: Any): EveObject = Try(EveObject(o)).getOrElse {
     o match {
-      case m: MongoDBObject => m.map { case (k, v) => (k -> mongoDBObjectToEveObject(v)) }.toMap
-      case l: MongoDBList => l.map(mongoDBObjectToEveObject).toArray
+      case o: BasicDBObject =>
+        val mongoObject: MongoDBObject = o
+        mongoObject
+      case l: BasicDBList =>
+        val mongoList: MongoDBList = l
+        mongoList
+      case id: ObjectId => EveObjectId(id)
     }
   }
+
+  implicit def mongoDBObjectToEveObject(o: MongoDBObject): EveObject =
+    EveStructuredObject(o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap)
+
+  implicit def mongoDBListToEveObject(o: MongoDBList): EveObject =
+    EveObjectList(o.map(dbObjectToEveObject))
 }
+
+case class EveObjectId(o: ObjectId) extends EveObject

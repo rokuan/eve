@@ -2,7 +2,6 @@ package com.ideal.eve.interpret
 
 import com.ideal.eve.db.EveDatabase
 import com.ideal.eve.server.EveSession
-import com.ideal.eve.universe.concurrent.TaskPool
 import com.rokuan.calliopecore.sentence.{ActionObject, IAction}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.QuestionObject.QuestionType

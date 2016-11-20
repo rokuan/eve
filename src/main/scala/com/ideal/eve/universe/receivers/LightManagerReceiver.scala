@@ -2,28 +2,32 @@ package com.ideal.eve.universe.receivers
 
 import com.ideal.eve.db.EveDatabase
 import com.ideal.eve.universe._
+import com.ideal.evecore.common.Mapping.Mapping
+import com.ideal.evecore.interpreter.EveObject
+import com.ideal.evecore.universe.receiver.{Message, Receiver}
+import com.ideal.evecore.universe.route.ValueSource
+import com.ideal.evecore.universe.{ObjectValueMatcher, OrValueMatcher, StringValueMatcher, ValueMatcher}
+import com.rokuan.calliopecore.sentence.IAction.ActionType
+
+import scala.util.{Failure, Try}
 
 /**
   * Created by Christophe on 29/04/2016.
   */
-class LightManagerReceiver(val db: EveDatabase) extends EveReceiver {
+class LightManagerReceiver(val db: EveDatabase) extends Receiver {
   override def initReceiver(): Unit = {}
 
-  override def getMappings(): Seq[(String, ValueMatcher)] = List(
-    ValueSource.ActionKey -> OrValueMatcher(Array(StringValueMatcher("TURN_ON"), StringValueMatcher("TURN_OFF"))),
-    ValueSource.WhatKey -> ObjectValueMatcher(List(
-      EveDatabase.TypeKey -> StringValueMatcher("LIGHT")
-    ))
+  /*override def getMappings(): Mapping[ValueMatcher] = Map(
+    ValueSource.ActionKey -> OrValueMatcher(Array(StringValueMatcher(ActionType.TURN_ON.name()), StringValueMatcher(ActionType.TURN_OFF.name()))),
+    ValueSource.WhatKey -> ObjectValueMatcher(Map(EveDatabase.TypeKey -> StringValueMatcher("LIGHT")))
+  )*/
+
+  override def getMappings(): Mapping[ValueMatcher] = Map(
+    "action" -> OrValueMatcher(Array(StringValueMatcher(ActionType.TURN_ON.name()), StringValueMatcher(ActionType.TURN_OFF.name()))),
+    "what" -> ObjectValueMatcher(Map(EveDatabase.TypeKey -> StringValueMatcher("LIGHT")))
   )
 
-  override def handleMessage(message: EveMessage): Unit = {
-    message match {
-      case EveObjectMessage(action, what: ObjectValueSource, _, _) => {
-        // TODO:
-      }
-      case _ =>
-    }
-  }
+  override def handleMessage(message: Message): Try[EveObject] = Failure(new Exception("Not implemented yet"))
 
   override def destroyReceiver(): Unit = {}
 }

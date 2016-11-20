@@ -4,7 +4,6 @@ import java.net.{ServerSocket, Socket}
 
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
-import com.ideal.eve.db.EveDatabase
 import com.ideal.eve.interpret.{EveContext, EveEvaluator}
 import com.rokuan.calliopecore.sentence.structure.InterpretationObject
 

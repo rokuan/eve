@@ -34,7 +34,7 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
 
     myNameIsChristophe.setSubject(i)
     myNameIsChristophe.setAction(new ActionObject(Tense.PRESENT, named))
-    myNameIsChristophe.setDirectObject(new PersonObject("Christophe"))
+    myNameIsChristophe.setDirectObject(new PersonObject("Toto"))
 
     val whatIsMyName = new QuestionObject
 
@@ -67,8 +67,8 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     val mySession = new EveSession("chris")
     val evaluator = new EveEvaluator(EveContext())(mySession)
     evaluator.eval(myNameIsChristophe)
-    val result = evaluator.eval(whatIsMyName)
-    assert(result.isInstanceOf[EveStringObject])
-    assert(result.asInstanceOf[EveStringObject].s == "Christophe")
+    evaluator.eval(whatIsMyName).map {
+      case EveStringObject(s) => s shouldBe "Christophe"
+    }
   }
 }

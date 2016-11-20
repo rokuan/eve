@@ -1,17 +1,38 @@
+import com.ideal.eve.interpret.{EveContext, EveEvaluator}
+import com.ideal.eve.server.EveSession
+import com.ideal.evecore.interpreter.{EveStringObject, EveStructuredObject}
+import com.ideal.evecore.io.CommonKey
+import com.ideal.evecore.universe.World
+import com.ideal.evecore.universe.receiver.base.UnitConverterController
 import com.rokuan.calliopecore.sentence._
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
-import com.rokuan.calliopecore.sentence.structure.OrderObject
+import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, OrderObject}
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.UnitObject.UnitType
-import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, UnitObject}
+import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PronounSubject, QuantityObject, UnitObject}
 import org.scalatest.{FlatSpec, Matchers}
+
+import scala.util.{Failure, Success}
 
 /**
   * Created by Christophe on 22/05/2016.
   */
 class ConvertSpec extends FlatSpec with Matchers {
   "The conversion" should "return 3600" in {
+    val converterReceiver = new UnitConverterController
+
+    World.registerReceiver(converterReceiver)
+
+    val i = new PronounSubject(new IPronoun {
+      override def getSource: PronounSource = PronounSource.I
+      override def getValue: String = "moi je"
+    })
+
+    val years = new QuantityObject()
+    years.amount = 26
+    years.unitType = UnitType.YEAR
+
     val convert = new IAction {
       override def getForm: Form = Form.IMPERATIVE
       override def getAction: ActionType = ActionType.CONVERT
@@ -41,5 +62,18 @@ class ConvertSpec extends FlatSpec with Matchers {
     convertMyAgeIntoSeconds.action = action
     convertMyAgeIntoSeconds.what = myAge
     convertMyAgeIntoSeconds.how = inSeconds
+
+    val mySession = new EveSession("chris")
+    val evaluator = new EveEvaluator(EveContext())(mySession)
+    //evaluator.eval(myAgeIs26Years)
+    evaluator.storage.set(evaluator.context, i, "age", years)
+    val result = evaluator.eval(convertMyAgeIntoSeconds)
+
+    World.unregisterReceiver(converterReceiver)
+
+    result match {
+      case Success(v) => println(v)
+      case Failure(e) => e.printStackTrace()
+    }
   }
 }

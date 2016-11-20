@@ -14,7 +14,7 @@ import com.ideal.evecore.interpreter._
 import EveObjectConverters._
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by Christophe on 04/10/2015.
@@ -177,7 +177,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
     notImplementedYet
   }
 
-  protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(query).get) }
+  protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { EveObjectConversions.dbObjectToEveObject(objectsCollection.findOne(query).get) }
 
   protected def queryObjectByType(t: String) = {
     val results = objectsCollection.find(MongoDBObject(TypeKey -> t))
@@ -191,7 +191,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   }
   protected def findObjectByKey(value: String) = findObjectByAttribute(ReservedKey, value)
   override def findAdditionalDataByCode(value: String) = findObjectByAttribute(CodeKey, value)
-  protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { EveObjectConversions.mongoDBObjectToEveObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
+  protected def findObjectByAttribute(key: String, value: String): Try[EveObject] = Try { EveObjectConversions.dbObjectToEveObject(objectsCollection.findOne(MongoDBObject(key -> value)).get) }
 
   protected def getType(o: EveObject): EveType = {
     o match {
@@ -216,7 +216,7 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
         } else {
           val from = findObject(context, name.getNominalSecondObject)
           from.map {
-            case EveStructuredObject(o) => o(name.`object`.getNameTag)
+            case EveStructuredObject(o) => o(name.`object`.getNameTag.toLowerCase)
           }
         }
       }
@@ -230,17 +230,15 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
     }
   }
 
-  override def findSubject(context: Context[MongoDBObject], subject: INominalObject): Try[EveObject] = findObject(context, subject)
-
   override def delete(context: Context[MongoDBObject], left: INominalObject, field: String, value: INominalObject): Unit = {}
 
   override def delete(context: Context[MongoDBObject], left: INominalObject, value: INominalObject): Unit = {
     findObject(context, value).map {
       case EveStringObject(field) => delete(context, left, field)
-      case EveStructuredObject(o) => delete(context, left, getType(o).name)
-      case EveObjectList(objects) =>
-        val commonType = EveType.getCommonSuperType(objects.map(getType(_)))
-        delete(context, left, commonType.name)
+      case o: EveStructuredObject => delete(context, left, getType(o).name)
+      case EveObjectList(objects) => objects.map(getType(_)).foreach(t => delete(context, left, t.name))
+        /*val commonType = EveType.getCommonSuperType(objects.map(getType(_)))
+        delete(context, left, commonType.name)*/
     }
   }
 
