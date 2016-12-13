@@ -4,7 +4,9 @@ import java.net.{ServerSocket, Socket}
 
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
+import com.ideal.eve.db.WordDatabase
 import com.ideal.eve.interpret.{EveContext, EveEvaluator}
+import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
 import com.rokuan.calliopecore.sentence.structure.InterpretationObject
 
 import scala.util.{Failure, Success}
@@ -87,6 +89,7 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
 
 class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread {
   val evaluator = new EveEvaluator(EveContext())(session)
+  val parser = new SentenceParser(new WordDatabase)
 
   override def run(): Unit = {
     var connected = true
@@ -100,21 +103,21 @@ class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thre
           connected = false
         } else {
           var dataSize = (0 until dataLength.length).map(i => (dataLength(i) & 0xFF) << (8 * i)).foldLeft(0)(_ + _)
-          val json = new StringBuilder
+          val text = new StringBuilder
 
           while(dataSize > 0){
             val tmp = new Array[Byte](1024)
             val size = is.read(tmp, 0, tmp.length)
 
             if(size > 0){
-              json.append(new String(tmp, 0, size))
+              text.append(new String(tmp, 0, size))
               dataSize -= size
             } else {
               // TODO: error
             }
           }
 
-          val obj = InterpretationObject.fromJSON(json.toString)
+          val obj = parser.parseText(text.toString())
           println(evaluator.eval(obj))
         }
       } catch {

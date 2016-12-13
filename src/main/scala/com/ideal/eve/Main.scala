@@ -1,5 +1,6 @@
 package com.ideal.eve
 
+import com.ideal.eve.db.WordDatabase
 import com.ideal.eve.server.EveServer
 
 /**
@@ -7,6 +8,7 @@ import com.ideal.eve.server.EveServer
  */
 object Main {
   def main(args: Array[String]) = {
+    WordDatabase.init()
     val server = EveServer()
     server.start()
   }

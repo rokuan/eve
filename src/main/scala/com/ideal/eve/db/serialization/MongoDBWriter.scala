@@ -1,11 +1,12 @@
 package com.ideal.eve.db.serialization
 
-import com.ideal.eve.db.WordDatabase
+import com.ideal.eve.db.{StateInfo, WordDatabase}
 import com.ideal.eve.db.collections.ItemCollection
 import com.mongodb.DBObject
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import com.rokuan.calliopecore.fr.autoroute.sentence._
 import com.rokuan.calliopecore.sentence.IValue
+import org.bson.types.ObjectId
 
 /**
   * Created by Christophe on 11/12/2016.
@@ -15,10 +16,10 @@ trait MongoDBWriter[T] {
 }
 
 object MongoDBWriter {
-  private def getObjectId[T <: IValue](o: T, collection: ItemCollection[T]) = {
+  private def getObjectId[T <: IValue](o: T, collection: ItemCollection[T]): ObjectId = {
     Option(o).map { v =>
       collection.findId(v.getValue()).getOrElse(collection.insert(v))
-    }.orNull
+    }.getOrElse(null)
   }
 
   implicit object WordInfoWriter extends MongoDBWriter[WordInfo] {
@@ -34,7 +35,7 @@ object MongoDBWriter {
       MongoDBObject("value" -> o.value, "latitude" -> o.latitude, "longitude" -> o.longitude)
   }
 
-  implicit object CountryWriter extends MongoDBWriter[CountryInfo] {
+  implicit object CountryInfoWriter extends MongoDBWriter[CountryInfo] {
     override def write(o: CountryInfo): DBObject =
       MongoDBObject("value" -> o.value, "code" -> o.code)
   }
@@ -90,14 +91,37 @@ object MongoDBWriter {
       MongoDBObject("value" -> o.value, "transportType" -> o.transportType)
   }
 
-  implicit object CustomDataWriter extends MongoDBWriter[CustomData] {
-    override def write(o: CustomData): DBObject =
+  abstract class CustomDataWriter[T <: CustomData] extends MongoDBWriter[T] {
+    override def write(o: T): DBObject =
       MongoDBObject("value" -> o.getValue(), "code" -> o.getCode())
   }
 
-  implicit object PrepositionWriter extends MongoDBWriter[Preposition[_ <: Enum[_], _]] {
-    override def write(o: Preposition[_ <: Enum[_], _]): DBObject =
-      MongoDBObject("value" -> o.getValue(), "context" -> o.getContext().name())
+  implicit object CustomObjectWriter extends CustomDataWriter[CustomObject]
+  implicit object CustomPlaceWriter extends CustomDataWriter[CustomPlace]
+  implicit object CustomModeWriter extends CustomDataWriter[CustomMode]
+  implicit object CustomPersonWriter extends CustomDataWriter[CustomPerson]
+
+  object PrepositionWriter {
+    def write[E <: Enum[E], F <: Enum[F]](o: Preposition[E, F]): DBObject = {
+      MongoDBObject(
+        "value" -> o.getValue(),
+        "context" -> o.getContext().name(),
+        "followers" -> MongoDBList(o.getFollowers().map(_.name))
+      )
+    }
+  }
+
+  implicit object PlacePrepositionWriter extends MongoDBWriter[PlacePreposition] {
+    override def write(o: PlacePreposition): DBObject = PrepositionWriter.write(o)
+  }
+  implicit object TimePrepositionWriter extends MongoDBWriter[TimePreposition] {
+    override def write(o: TimePreposition): DBObject = PrepositionWriter.write(o)
+  }
+  implicit object WayPrepositionWriter extends MongoDBWriter[WayPreposition] {
+    override def write(o: WayPreposition): DBObject = PrepositionWriter.write(o)
+  }
+  implicit object PurposePrepositionWriter extends MongoDBWriter[PurposePreposition] {
+    override def write(o: PurposePreposition): DBObject = PrepositionWriter.write(o)
   }
 
   implicit object VerbConjugationWriter extends MongoDBWriter[VerbConjugation] {
@@ -137,6 +161,15 @@ object MongoDBWriter {
         "stateValue" -> o.stateValue
       )
     }
+  }
+
+  implicit object StateInfoWriter extends MongoDBWriter[StateInfo] {
+    override def write(o: StateInfo): DBObject =
+      MongoDBObject(
+        "value" -> o.name,
+        "state" -> o.state,
+        "stateValue" -> o.value
+      )
   }
 }
 

@@ -6,8 +6,6 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.rokuan.calliopecore.sentence.IValue
 
-import scala.util.matching.Regex
-
 /**
   * Created by Christophe on 11/12/2016.
   */
@@ -25,7 +23,9 @@ class ItemCollection[T <: IValue](val collectionName: String)(implicit writer: M
   def update(o: T) = underlying.update(MongoDBObject("value" -> o.getValue), writer.write(o), true)
   def findId(value: String): Option[ObjectId] = findByValue(value).map(_._1)
   def findOneStartingWith(value: String) = findByValue(("^" + value).r)
-  def find(value: String): T = findByValue(value).map(_._2).orNull
+  def find(value: String): Option[T] = findByValue(value).map(_._2)
+  def get(value: String): T = find(value).getOrElse(null.asInstanceOf[T])
   protected def findByValue(value: Any): Option[(ObjectId, T)] = underlying.findOne(MongoDBObject("value" -> value)).map(r => (r._id.get, reader.read(r)))
   def findById(id: ObjectId): Option[T] = underlying.findOneByID(id).map(reader.read)
+  def getById(id: ObjectId): T = findById(id).getOrElse(null.asInstanceOf[T])
 }

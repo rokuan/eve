@@ -1,0 +1,12 @@
+TURNED_ON;on;true
+TURNED_OFF;on;false
+OPENED;open;true
+CLOSED;open;false
+ENABLED;enabled;true
+DISABLED;enabled;false
+RUNNING;state;running
+STOPPED;state;stopped
+PAUSED;state;paused
+WAITING;state;waiting
+LOCKED;locked;true
+UNLOCKED;locked;false

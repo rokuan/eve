@@ -1,0 +1,6 @@
+pour;TO;VERBAL
+afin de;TO;VERBAL
+afin d;TO;VERBAL
+afin que;TO;VERBAL
+afin qu;TO;VERBAL
+de manière à;TO;VERBAL
