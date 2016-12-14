@@ -1,11 +1,9 @@
 package com.ideal.eve.universe.receivers
 
 import com.ideal.eve.db.EveDatabase
-import com.ideal.eve.universe._
 import com.ideal.evecore.common.Mapping.Mapping
 import com.ideal.evecore.interpreter.EveObject
 import com.ideal.evecore.universe.receiver.{Message, Receiver}
-import com.ideal.evecore.universe.route.ValueSource
 import com.ideal.evecore.universe.{ObjectValueMatcher, OrValueMatcher, StringValueMatcher, ValueMatcher}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 
@@ -16,11 +14,6 @@ import scala.util.{Failure, Try}
   */
 class LightManagerReceiver(val db: EveDatabase) extends Receiver {
   override def initReceiver(): Unit = {}
-
-  /*override def getMappings(): Mapping[ValueMatcher] = Map(
-    ValueSource.ActionKey -> OrValueMatcher(Array(StringValueMatcher(ActionType.TURN_ON.name()), StringValueMatcher(ActionType.TURN_OFF.name()))),
-    ValueSource.WhatKey -> ObjectValueMatcher(Map(EveDatabase.TypeKey -> StringValueMatcher("LIGHT")))
-  )*/
 
   override def getMappings(): Mapping[ValueMatcher] = Map(
     "action" -> OrValueMatcher(Array(StringValueMatcher(ActionType.TURN_ON.name()), StringValueMatcher(ActionType.TURN_OFF.name()))),

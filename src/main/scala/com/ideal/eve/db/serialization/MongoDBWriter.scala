@@ -3,7 +3,7 @@ package com.ideal.eve.db.serialization
 import com.ideal.eve.db.{StateInfo, WordDatabase}
 import com.ideal.eve.db.collections.ItemCollection
 import com.mongodb.DBObject
-import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
+import com.mongodb.casbah.commons.MongoDBObject
 import com.rokuan.calliopecore.fr.autoroute.sentence._
 import com.rokuan.calliopecore.sentence.IValue
 import org.bson.types.ObjectId
@@ -26,7 +26,7 @@ object MongoDBWriter {
     override def write(o: WordInfo): DBObject =
       MongoDBObject(
         "value" -> o.value,
-        "types" -> MongoDBList(o.types.map(_.toString))
+        "types" -> o.types.map(_.toString)
       )
   }
 
@@ -59,7 +59,7 @@ object MongoDBWriter {
     override def write(o: AdjectiveInfo): DBObject =
       MongoDBObject(
         "value" -> o.value,
-        "adjectiveType" -> o.adjectiveType.name(),
+        "adjectiveType" -> Option(o.adjectiveType).map(_.name()).orNull,
         "field" -> o.field,
         "state" -> o.state,
         "stateValue" -> o.stateValue
@@ -88,7 +88,7 @@ object MongoDBWriter {
 
   implicit object TransportInfoWriter extends MongoDBWriter[TransportInfo] {
     override def write(o: TransportInfo): DBObject =
-      MongoDBObject("value" -> o.value, "transportType" -> o.transportType)
+      MongoDBObject("value" -> o.value, "transportType" -> o.transportType.name())
   }
 
   abstract class CustomDataWriter[T <: CustomData] extends MongoDBWriter[T] {
@@ -106,7 +106,7 @@ object MongoDBWriter {
       MongoDBObject(
         "value" -> o.getValue(),
         "context" -> o.getContext().name(),
-        "followers" -> MongoDBList(o.getFollowers().map(_.name))
+        "followers" -> o.getFollowers().map(_.name)
       )
     }
   }
@@ -130,7 +130,7 @@ object MongoDBWriter {
 
       MongoDBObject(
         "value" -> o.name,
-        "pronoun" -> o.pronoun.toString,
+        "pronoun" -> Option(o.pronoun).map(_.toString).orNull,
         "tense" -> o.tense.toString,
         "form" -> o.form.toString,
         "verb" -> verbId

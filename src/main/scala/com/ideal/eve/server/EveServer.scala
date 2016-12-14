@@ -7,7 +7,6 @@ import com.ideal.eve.controller.EveAuth
 import com.ideal.eve.db.WordDatabase
 import com.ideal.eve.interpret.{EveContext, EveEvaluator}
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
-import com.rokuan.calliopecore.sentence.structure.InterpretationObject
 
 import scala.util.{Failure, Success}
 

@@ -94,10 +94,10 @@ object WordDatabase {
     loadData("common_names.txt", Names)
     loadData("places.txt", Places)
     loadData("words.txt", Words)
-    loadData("place_prepositions", PlacePrepositions)
-    loadData("time_prepositions", TimePrepositions)
-    loadData("way_prepositions", WayPrepositions)
-    loadData("purpose_prepositions", PurposePrepositions)
+    loadData("place_prepositions.txt", PlacePrepositions)
+    loadData("time_prepositions.txt", TimePrepositions)
+    loadData("way_prepositions.txt", WayPrepositions)
+    loadData("purpose_prepositions.txt", PurposePrepositions)
   }
 
   private def loadData[T <: IValue](file: String, collection: ItemCollection[T])(implicit adapter: DataAdapter[T]) = {

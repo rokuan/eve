@@ -4,7 +4,7 @@ import java.util.{Calendar, Date}
 
 import com.rokuan.calliopecore.sentence.structure.content.ITimeObject
 import com.rokuan.calliopecore.sentence.structure.data.time.TimeAdverbial.DateDefinition
-import com.rokuan.calliopecore.sentence.structure.data.time.{RelativeTimeObject, SingleTimeObject, TimeAdverbial}
+import com.rokuan.calliopecore.sentence.structure.data.time.{RelativeTimeObject, SingleTimeObject}
 
 /**
   * Created by Christophe on 24/04/2016.

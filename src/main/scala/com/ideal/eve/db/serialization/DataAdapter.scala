@@ -46,13 +46,13 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
 
   implicit object CityInfoAdapter extends DataAdapter[CityInfo] {
     override def transform(values: Array[String]): CityInfo = {
-      CityInfo(values(0), values(1).toDouble, values(2).toDouble)
+      CityInfo(values(2), values(0).toDouble, values(1).toDouble)
     }
   }
 
   implicit object CountryInfoAdapter extends DataAdapter[CountryInfo] {
     override def transform(values: Array[String]): CountryInfo = {
-      CountryInfo(values(0), values(1))
+      CountryInfo(values(4), values(2))
     }
   }
 
@@ -136,8 +136,8 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
 
     override def transform(values: Array[String]): T = {
       build(values(0),
-        javaEnum[E](values(2)),
-        javaEnums[F](values(3).split(",")))
+        javaEnum[E](values(1)),
+        javaEnums[F](values(2).split(",")))
     }
   }
 
@@ -160,10 +160,10 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
   implicit object VerbConjugationAdapter extends DataAdapter[VerbConjugation] {
     override def transform(values: Array[String]): VerbConjugation = {
       VerbConjugation(
-        values(0),
-        getObject(values(1), Verbs).getOrElse(null),
-        scalaEnum(values(2))(Verb.ConjugationTense),
-        javaEnum[IAction.Form](values(3)),
+        values(1),
+        getObject(values(0), Verbs).getOrElse(null),
+        scalaEnum(values(3))(Verb.ConjugationTense),
+        javaEnum[IAction.Form](values(2)),
         scalaEnum(values(4).toInt)(Verb.Pronoun)
       )
     }
@@ -173,9 +173,12 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
     override def transform(values: Array[String]): Verb = {
       Verb(
         values(0),
-        values(1),
-        getObject(values(2), Actions).orNull,
-        getObject(values(3), Actions).orNull
+        values(0) match {
+          case "être" | "avoir" => true
+          case _ => false
+        },
+        getObject(values(1), Actions).orNull,
+        getObject(values(2), Actions).orNull
       )
     }
   }

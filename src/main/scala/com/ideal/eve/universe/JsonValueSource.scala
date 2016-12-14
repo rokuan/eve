@@ -1,6 +1,6 @@
 package com.ideal.eve.universe
 
-import com.google.gson.{JsonElement, JsonObject, JsonPrimitive}
+import com.google.gson.JsonElement
 import com.ideal.evecore.universe.route._
 
 import collection.JavaConversions._

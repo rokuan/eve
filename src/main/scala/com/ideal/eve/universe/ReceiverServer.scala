@@ -3,7 +3,6 @@ package com.ideal.eve.universe
 import java.net.ServerSocket
 
 import com.ideal.eve.config.PropertyManager
-import com.ideal.evecore.universe.World
 
 /**
   * Created by Christophe on 29/03/2016.
