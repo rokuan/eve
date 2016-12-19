@@ -13,8 +13,9 @@ import com.ideal.eve.interpret._
 import com.ideal.evecore.interpreter._
 import EveObjectConverters._
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
+import com.rokuan.calliopecore.sentence.structure.data.count.{QuantityObject => _, _}
 
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 /**
   * Created by Christophe on 04/10/2015.
@@ -179,6 +180,44 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
 
   protected def findOneObject(query: MongoDBObject): Try[EveObject] = Try { EveObjectConversions.dbObjectToEveObject(objectsCollection.findOne(query).get) }
 
+  protected def queryObjects(count: CountObject, query: MongoDBObject): EveObject = {
+    val results = objectsCollection.find(query)
+    val v = count match {
+      case l: LimitedItemsObject =>
+        val items =
+          if(l.range == CountObject.Range.FIRST){
+            results.take(l.count.toInt).toSeq
+          } else {
+            val length = results.length
+            Try(results.skip(length - l.count.toInt).toSeq).getOrElse(Seq())
+          }
+        new EveObjectList(items.map(o => EveObjectConversions.mongoDBObjectToEveObject(o)))
+      case a: AllItemsObject => new EveObjectList(results.map(o => EveObjectConversions.mongoDBObjectToEveObject(o)).toSeq)
+      case i: IntervalObject => new EveObjectList(results.skip(0)
+        .take(results.length)
+        .map(o => EveObjectConversions.mongoDBObjectToEveObject(o))
+        .toSeq)
+      case m: MultipleItemsObject =>
+        def gambleElements(lastIndex: Int, indexes: List[Int]): List[MongoDBObject] = {
+          indexes match {
+            case Nil => Nil
+            case head :: tail => results.skip(head - lastIndex).one() :: gambleElements(head, tail)
+          }
+        }
+        new EveObjectList(gambleElements(0, m.items.map(_.toInt).sorted.toList)
+          .map(EveObjectConversions.mongoDBObjectToEveObject))
+      case f: FixedItemObject =>
+        Try {
+          val element = results.skip(f.position.toInt - 1).one()
+          val mongoObject: MongoDBObject = element
+          EveObjectConversions.mongoDBObjectToEveObject(mongoObject)
+        }.getOrElse(throw new Exception("No such element at position " + f.position))
+      case q: QuantityObject => throw new Exception("Cannot filter items with a QuantityObject")
+    }
+    results.close
+    v
+  }
+
   protected def queryObjectByType(t: String) = {
     val results = objectsCollection.find(MongoDBObject(TypeKey -> t))
     val objects = results.toList
@@ -237,8 +276,8 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
       case EveStringObject(field) => delete(context, left, field)
       case o: EveStructuredObject => delete(context, left, getType(o).name)
       case EveObjectList(objects) => objects.map(getType(_)).foreach(t => delete(context, left, t.name))
-        /*val commonType = EveType.getCommonSuperType(objects.map(getType(_)))
-        delete(context, left, commonType.name)*/
+      /*val commonType = EveType.getCommonSuperType(objects.map(getType(_)))
+      delete(context, left, commonType.name)*/
     }
   }
 

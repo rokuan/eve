@@ -80,9 +80,9 @@ object MongoDBReader extends EnumClassesImports with EnumUtils {
       AdjectiveInfo(
         obj.getAsOrElse("value", ""),
         getJavaEnumValue[AdjectiveValue](obj, "adjectiveType"),
-        obj.getAsOrElse("field", null),
-        obj.getAsOrElse("state", null),
-        obj.getAsOrElse("stateValue", null)
+        obj.getAsOrElse[String]("field", null),
+        obj.getAsOrElse[String]("state", null),
+        obj.getAsOrElse[String]("stateValue", null)
       )
     }
   }
@@ -205,9 +205,9 @@ object MongoDBReader extends EnumClassesImports with EnumUtils {
       val obj: MongoDBObject = o
       Action(
         getJavaEnumValue[ActionType](obj, "value"),
-        obj.getAsOrElse("field", null),
-        obj.getAsOrElse("state", null),
-        obj.getAsOrElse("stateValue", null)
+        obj.getAsOrElse[String]("field", null),
+        obj.getAsOrElse[String]("state", null),
+        obj.getAsOrElse[String]("stateValue", null)
       )
     }
   }

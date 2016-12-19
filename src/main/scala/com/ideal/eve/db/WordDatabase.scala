@@ -25,7 +25,7 @@ class WordDatabase extends WordStorage {
   override def findTransportInfo(q: String): TransportInfo = Transports.get(q)
   override def findConjugation(q: String): VerbConjugation = Conjugations.get(q)
   override def findNameInfo(q: String): NameInfo = Names.get(q)
-  override def findFirstnameInfo(q: String): FirstNameInfo = FirstNames.get(q)
+  override def findFirstnameInfo(q: String): FirstNameInfo = FirstNames.get(q.toLowerCase) //FirstNames.get(q)
   override def findWordInfo(q: String): WordInfo = Words.get(q)
   override def findAdjectiveInfo(q: String): AdjectiveInfo = Adjectives.get(q)
 
