@@ -48,7 +48,7 @@ object EveDatabase {
   def notImplementedYet = throw new RuntimeException("Not implemented yet")
 }
 
-class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObject] {
+class EveDatabase(implicit val session: EveSession) {
   import EveDatabase._
 
   val objectsCollection: MongoCollection = db(ObjectCollectionName)
@@ -147,7 +147,12 @@ class EveDatabase(implicit val session: EveSession) extends Storage[MongoDBObjec
   }
 
   override def set(context: Context[MongoDBObject], left: INominalObject, value: INominalObject) = {
+    for {
+      source <- findSubject(context, left)
+      member <- findObject(context, value, true)
+    } yield {
 
+    }
   }
 
   private def findMyNameObject(context: Context[MongoDBObject], name: NameObject): Try[EveObject] = {
