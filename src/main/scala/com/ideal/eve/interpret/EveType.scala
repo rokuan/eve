@@ -1,5 +1,6 @@
 package com.ideal.eve.interpret
 
+import com.ideal.eve.db.EveDatabase
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.query.Imports._
 
@@ -11,10 +12,15 @@ import scala.annotation.tailrec
 object EveType {
   import com.ideal.eve.db.EveDatabase._
   val RootType = new EveType("__any", 0)
+  val NoType = new EveType("__none", -1)
 
-  def apply(o: MongoDBObject) = {
-    val name = o.getAs[String](TypeKey).get
-    val level = o.getAs[Int](LevelKey).get
+  def apply(name: String): EveType = EveDatabase.db(TypeCollectionName).findOne(MongoDBObject(TypeKey -> name))
+    .map(apply(_))
+    .getOrElse(RootType)
+
+  def apply(o: MongoDBObject): EveType = {
+    val name = o.as[String](TypeKey)
+    val level = o.as[Int](LevelKey)
     new EveType(name, level)
   }
 

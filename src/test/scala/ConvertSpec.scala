@@ -1,5 +1,8 @@
-import com.ideal.eve.interpret.{EveContext, EveEvaluator}
+import com.ideal.eve.db.EveEvaluator
+import com.ideal.eve.environment.Environment
+import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
+import com.ideal.eve.universe.Universe
 import com.ideal.evecore.interpreter.{EveStringObject, EveStructuredObject}
 import com.ideal.evecore.io.CommonKey
 import com.ideal.evecore.universe.World
@@ -22,7 +25,7 @@ class ConvertSpec extends FlatSpec with Matchers {
   "The conversion" should "return 3600" in {
     val converterReceiver = new UnitConverterController
 
-    World.registerReceiver(converterReceiver)
+    Universe.registerReceiver(converterReceiver)
 
     val i = new PronounSubject(new IPronoun {
       override def getSource: PronounSource = PronounSource.I
@@ -63,13 +66,27 @@ class ConvertSpec extends FlatSpec with Matchers {
     convertMyAgeIntoSeconds.what = myAge
     convertMyAgeIntoSeconds.how = inSeconds
 
+    val myAgeIs26Years = new OrderObject
+    myAgeIs26Years.subject = i
+    myAgeIs26Years.action = new ActionObject(Tense.PRESENT, new IAction {
+      override def getForm: Form = Form.IMPERATIVE
+      override def getAction: ActionType = ActionType.HAVE
+      override def getTense: Tense = Tense.PRESENT
+      override def isFieldBound: Boolean = true
+      override def getBoundField: String = "age"
+      override def getValue: String = "ai"
+      override def getState: String = null
+      override def isStateBound: Boolean = false
+      override def getBoundState: String = null
+    })
+    myAgeIs26Years.what = years
+
     val mySession = new EveSession("chris")
-    val evaluator = new EveEvaluator(EveContext())(mySession)
-    //evaluator.eval(myAgeIs26Years)
-    evaluator.storage.set(evaluator.context, i, "age", years)
+    val evaluator = new EveEvaluator()(mySession)
+    evaluator.eval(myAgeIs26Years)
     val result = evaluator.eval(convertMyAgeIntoSeconds)
 
-    World.unregisterReceiver(converterReceiver)
+    Universe.unregisterReceiver(converterReceiver)
 
     result match {
       case Success(v) => println(v)

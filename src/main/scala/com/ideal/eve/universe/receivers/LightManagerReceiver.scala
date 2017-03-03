@@ -12,7 +12,8 @@ import scala.util.{Failure, Try}
 /**
   * Created by Christophe on 29/04/2016.
   */
-class LightManagerReceiver(val db: EveDatabase) extends Receiver {
+//class LightManagerReceiver(val db: EveDatabase) extends Receiver {
+class LightManagerReceiver extends Receiver {
   override def initReceiver(): Unit = {}
 
   override def getMappings(): Mapping[ValueMatcher] = Map(

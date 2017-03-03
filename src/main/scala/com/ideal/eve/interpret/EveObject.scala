@@ -16,7 +16,9 @@ import com.mongodb.casbah.query.Imports._
  */
 
 object EveObjectConverters {
-  implicit def eveStructuredObjectToMongoDBObject(o: EveStructuredObject): MongoDBObject =
+  /*implicit def eveStructuredObjectToMongoDBObject(o: EveStructuredObject): MongoDBObject =
+    o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject*/
+  implicit def eveMappingObjectToMongoDBObject(o: EveMappingObject): MongoDBObject =
     o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject
 
   implicit def eveObjectToMongoDBObject(o: EveObject): AnyRef = {
@@ -34,14 +36,28 @@ object EveObjectConverters {
         val gson: Gson = FullGsonBuilder.getSerializationGsonBuilder.create()
         JSON.parse(gson.toJson(p, classOf[IPlaceObject])).asInstanceOf[MongoDBObject]
       }
-      case o: EveStructuredObject => eveStructuredObjectToMongoDBObject(o)
+      //case o: EveStructuredObject => eveStructuredObjectToMongoDBObject(o)
+      case o: EveMappingObject => eveMappingObjectToMongoDBObject(o)
       case EveObjectList(a) => MongoDBList(a.map(eveObjectToMongoDBObject(_)))
       case EveObjectId(id) => id
+      case _ => MongoDBObject()
     }
   }
 }
 
 object EveObjectConversions {
+  /*implicit def dbObjectToEveObject(o: Any): EveObject = Try(EveObject(o)).getOrElse {
+    o match {
+      case o: BasicDBObject =>
+        val mongoObject: MongoDBObject = o
+        mongoObject
+      case l: BasicDBList =>
+        val mongoList: MongoDBList = l
+        mongoList
+      case id: ObjectId => EveObjectId(id)
+    }
+  }*/
+
   implicit def dbObjectToEveObject(o: Any): EveObject = Try(EveObject(o)).getOrElse {
     o match {
       case o: BasicDBObject =>
@@ -54,8 +70,10 @@ object EveObjectConversions {
     }
   }
 
+  implicit def dbDataToEveObject(o: AnyRef): EveObject = o: Any
+
   implicit def mongoDBObjectToEveObject(o: MongoDBObject): EveObject =
-    EveStructuredObject(o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap)
+    EveMappingObject(o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap)
 
   implicit def mongoDBListToEveObject(o: MongoDBList): EveObject =
     EveObjectList(o.map(dbObjectToEveObject))

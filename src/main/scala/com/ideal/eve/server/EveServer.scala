@@ -4,8 +4,8 @@ import java.net.{ServerSocket, Socket}
 
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
-import com.ideal.eve.db.WordDatabase
-import com.ideal.eve.interpret.{EveContext, EveEvaluator}
+import com.ideal.eve.db.{EveEvaluator, WordDatabase}
+import com.ideal.eve.interpret.EveContext
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
 
 import scala.util.{Failure, Success}
@@ -87,7 +87,7 @@ class EveServer(val host: String, val port: Int) extends AutoCloseable {
 }
 
 class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread {
-  val evaluator = new EveEvaluator(EveContext())(session)
+  val evaluator = new EveEvaluator()(session)
   val parser = new SentenceParser(new WordDatabase)
 
   override def run(): Unit = {

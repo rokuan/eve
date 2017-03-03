@@ -2,9 +2,8 @@ package com.ideal.eve.interpret
 
 import com.google.gson.Gson
 import com.ideal.eve.db.EveDatabase
-import com.ideal.eve.server.EveSession
-import com.ideal.evecore.interpreter.Context
-import com.mongodb.casbah.MongoDB
+import com.ideal.evecore.interpreter.{EveObjectList, EveStructuredObject, EveObject, Context}
+import com.mongodb.casbah.{MongoCollection, MongoDB}
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
 import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, IPlaceObject, ITimeObject}
@@ -24,18 +23,22 @@ object EveContext {
   def apply() = new EveContext(EveDatabase.db)
 }
 
-class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
+object EveDatabaseContext {
+  def apply() = new EveDatabaseContext(EveDatabase.db(EveDatabase.ObjectCollectionName))
+}
+
+class EveContext(val db: MongoDB) extends Context {
   import EveContext._
 
   protected val objectCollection = db(ContextDbName)
 
-  override def addNominalObject(nominalObject: INominalObject): Unit =
+  def addNominalObject(nominalObject: INominalObject): Unit =
     objectCollection += serializeObject(nominalObject, classOf[INominalObject])
 
-  override def addTimeObject(timeObject: ITimeObject): Unit =
+  def addTimeObject(timeObject: ITimeObject): Unit =
     objectCollection += serializeObject(timeObject, classOf[ITimeObject])
 
-  override def addPlaceObject(placeObject: IPlaceObject): Unit =
+  def addPlaceObject(placeObject: IPlaceObject): Unit =
     objectCollection += serializeObject(placeObject, classOf[IPlaceObject])
 
   protected def serializeObject(obj: AnyRef, objClass: Class[_]): MongoDBObject = {
@@ -43,13 +46,13 @@ class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
     JSON.parse(gson.toJson(obj, objClass)).asInstanceOf[MongoDBObject]
   }
 
-  override def findLastNominalObject(query: MongoDBObject): Try[INominalObject] =
+  def findLastNominalObject(query: MongoDBObject): Try[INominalObject] =
     queryWithObjectType(query, "nominal").map(result => deserializeObject(result, classOf[INominalObject]))
 
-  override def findLastTimeObject(query: MongoDBObject): Try[ITimeObject] =
+  def findLastTimeObject(query: MongoDBObject): Try[ITimeObject] =
     queryWithObjectType(query, "time").map(result => deserializeObject(result, classOf[ITimeObject]))
 
-  override def findLastPlaceObject(query: MongoDBObject): Try[IPlaceObject] =
+  def findLastPlaceObject(query: MongoDBObject): Try[IPlaceObject] =
     queryWithObjectType(query, "place").map(result => deserializeObject(result, classOf[IPlaceObject]))
 
   protected def queryWithObjectType(initialQuery: MongoDBObject, objectType: String): Try[MongoDBObject] = {
@@ -62,5 +65,51 @@ class EveContext(val db: MongoDB) extends Context[MongoDBObject] {
   protected def deserializeObject[T](obj: MongoDBObject, objClass: Class[T]): T = {
     val gson: Gson = FullGsonBuilder.getDeserializationGsonBuilder.create()
     gson.fromJson(JSON.serialize(obj), objClass)
+  }
+
+  override def findItemsOfType(t: String): Option[EveObject] = None // TODO:
+}
+
+class EveDatabaseContext private (val collection: MongoCollection) extends Context {
+  override def findItemsOfType(t: String): Option[EveObject] = {
+    val results = collection.find(MongoDBObject(EveObject.TypeKey -> t))
+    val resultList = results.toList
+    results.close()
+
+    if(resultList.isEmpty){
+      Option.empty[EveObject]
+    } else if(resultList.size == 1){
+      resultList.headOption.map(new EveMongoDBObject(_)(collection))
+    } else {
+      Some(EveObjectList(resultList.map(new EveMongoDBObject(_)(collection))))
+    }
+  }
+}
+
+class EveMongoDBObject(val underlying: MongoDBObject)(val initialCollection: MongoCollection) extends EveStructuredObject {
+  import EveObjectConverters._
+  import EveObjectConversions._
+
+  override def getType(): String = underlying.as[String](EveObject.TypeKey)
+
+  override def get(field: String): Option[EveObject] = underlying.get(field).map(v => v: EveObject)
+
+  override def getState(state: String): Option[String] = underlying.get("state").collect { case s: String => s }
+
+  override def apply(field: String): EveObject = underlying(field)
+
+  override def set(field: String, value: EveObject): Unit = {
+    underlying(field) = eveObjectToMongoDBObject(value)
+    initialCollection.save(underlying)
+  }
+
+  override def setState(state: String, value: String): Unit = {
+    if(!underlying.contains("state")){
+      underlying("state") = MongoDBObject(state -> value)
+    } else {
+      val objectState = underlying.as[MongoDBObject]("state")
+      objectState(state) = value
+    }
+    initialCollection.save(underlying)
   }
 }
