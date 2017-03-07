@@ -112,4 +112,8 @@ class EveMongoDBObject(val underlying: MongoDBObject)(val initialCollection: Mon
     }
     initialCollection.save(underlying)
   }
+
+  override def has(field: String): Boolean = underlying.containsField(field)
+
+  override def hasState(state: String): Boolean = underlying.getAs[MongoDBObject]("state").map(_.containsField(state)).getOrElse(false)
 }
