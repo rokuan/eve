@@ -1,9 +1,9 @@
 import com.ideal.eve.db.EveEvaluator
-import com.ideal.eve.environment.Environment
+import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.Universe
-import com.ideal.evecore.interpreter.{EveStringObject, EveStructuredObject}
+import com.ideal.evecore.interpreter.{EveFailureObject, EveSuccessObject, EveStringObject, EveStructuredObject}
 import com.ideal.evecore.io.CommonKey
 import com.ideal.evecore.universe.World
 import com.ideal.evecore.universe.receiver.base.UnitConverterController
@@ -89,8 +89,8 @@ class ConvertSpec extends FlatSpec with Matchers {
     Universe.unregisterReceiver(converterReceiver)
 
     result match {
-      case Success(v) => println(v)
-      case Failure(e) => e.printStackTrace()
+      case EveSuccessObject(v) => println(v)
+      case EveFailureObject(e) => sys.error(e)
     }
   }
 }

@@ -1,6 +1,6 @@
 package com.ideal.eve.db
 
-import com.ideal.eve.environment.Environment
+import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.Universe
 import com.ideal.evecore.universe.execution.TaskHandler
@@ -53,7 +53,7 @@ class EveEvaluator(implicit val session: EveSession) extends Evaluator {
   val objectsCollection: MongoCollection = db(ObjectCollectionName)
   val typesCollection: MongoCollection = db(TypeCollectionName)
 
-  override protected val context: Context = Environment
+  override protected val context: Context = EveEnvironment
   override protected val history: History = new EveHistory(db(HistoryCollectionName))
   override protected val taskHandler: TaskHandler = new TaskHandler(Universe)
 

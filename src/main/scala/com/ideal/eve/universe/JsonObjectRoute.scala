@@ -31,6 +31,6 @@ object JsonObjectRoute {
 
   def apply(o: JsonObject): ObjectValueMatcher = {
     val mappings = o.entrySet().map(p => (p.getKey -> JsonObjectRoute(p.getValue))).toMap
-    ObjectValueMatcher(mappings)
+    ObjectValueMatcher(mappings.toSeq: _*)
   }
 }

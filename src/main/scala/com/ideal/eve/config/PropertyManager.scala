@@ -20,4 +20,6 @@ object PropertyManager {
   def get(name: String, default: String): String = {
     Option(properties.getProperty(name)).map(p => p).getOrElse(default)
   }
+
+  def get(name: String): String = properties.getProperty(name)
 }

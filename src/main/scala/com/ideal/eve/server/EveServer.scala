@@ -5,14 +5,10 @@ import java.net.{ServerSocket, Socket}
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
 import com.ideal.eve.db.{EveEvaluator, WordDatabase}
-import com.ideal.eve.interpret.EveContext
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
 
 import scala.util.{Failure, Success}
 
-sealed trait EveServerMessage
-case object StartServerMessage extends EveServerMessage
-case object StopServerMessage extends EveServerMessage
 
 /**
   * Created by Christophe on 31/01/2016.

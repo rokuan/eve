@@ -27,7 +27,7 @@ object EveDatabaseContext {
   def apply() = new EveDatabaseContext(EveDatabase.db(EveDatabase.ObjectCollectionName))
 }
 
-class EveContext(val db: MongoDB) extends Context {
+class EveContext private (val db: MongoDB) extends Context {
   import EveContext._
 
   protected val objectCollection = db(ContextDbName)
