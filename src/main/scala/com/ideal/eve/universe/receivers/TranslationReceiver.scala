@@ -11,11 +11,10 @@ import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.WayType
 import com.ideal.evecore.interpreter.EveObjectDSL._
 import org.json4s.native.JsonMethods
-//import org.json4s.JsonDSL
 
 import TranslationReceiver._
 import scala.xml.XML
-import scalaj.http.{HttpOptions, Http}
+import scalaj.http.Http
 
 import scala.util.{Failure, Success, Try}
 
