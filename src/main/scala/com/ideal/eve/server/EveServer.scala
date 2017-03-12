@@ -1,12 +1,14 @@
 package com.ideal.eve.server
 
 import java.net.{ServerSocket, Socket}
+import java.util.concurrent.atomic.AtomicBoolean
 
-import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.controller.EveAuth
 import com.ideal.eve.db.{EveEvaluator, WordDatabase}
+import com.ideal.evecore.interpreter.remote.StreamUtils
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
 
+import scala.util.control.Breaks
 import scala.util.{Failure, Success}
 
 
@@ -15,84 +17,63 @@ import scala.util.{Failure, Success}
   */
 object EveServer {
   val ServerConfigurationFile = "server.properties"
-  val HostProperty = classOf[EveServer].getName + ".host"
-  val PortProperty = classOf[EveServer].getName + ".port"
-
-  def apply() = {
-    new EveServer(PropertyManager.get(HostProperty, "localhost"),
-      PropertyManager.get(PortProperty, 7980))
-  }
 }
 
-class EveServer(val host: String, val port: Int) extends AutoCloseable {
-  var server: ServerSocket = null
-  var running: Boolean = false
-  val users: collection.mutable.Map[String, EveUser] = collection.mutable.Map[String, EveUser]()
+class EveServer(val port: Int) extends Thread with AutoCloseable {
+  val server = new ServerSocket(port)
+  val users = collection.mutable.Map[String, EveUser]()
 
-  def start() = {
-    new Thread(new Runnable(){
-      override def run(): Unit = {
-        server = new ServerSocket(port)
-        running = true
+  override def run() = {
+    val breaks = new Breaks
 
-        while(running){
-          try {
-            val client = server.accept()
-            val is = client.getInputStream
-            val loginData = new Array[Byte](is.read() & 0xFF)
+    breaks.breakable {
+      while(true){
+        try {
+          val client = server.accept()
+          val is = client.getInputStream
+          val loginData = new Array[Byte](is.read() & 0xFF)
+          is.read(loginData)
+          val passwordData = new Array[Byte](is.read() & 0xFF)
+          is.read(passwordData)
 
-            is.read(loginData)
+          val login = new String(loginData)
+          val password = new String(passwordData)
 
-            val passwordData = new Array[Byte](is.read() & 0xFF)
-
-            is.read(passwordData)
-
-            val login = new String(loginData)
-            val password = new String(passwordData)
-
-            EveAuth.login(login, password) match {
-              case Success(l) => {
-                val user = new EveUser(client)(new EveSession(login))
-                val os = client.getOutputStream
-                os.write('Y')
-                os.flush()
-                users += (login -> user)
-                user.start()
-              }
-              case Failure(e) => {
-                val os = client.getOutputStream
-                os.write('N')
-                os.flush()
-                client.close()
-              }
+          EveAuth.login(login, password) match {
+            case Success(l) => {
+              val user = new EveUser(client)(new EveSession(l))
+              val os = client.getOutputStream
+              os.write('Y')
+              os.flush()
+              users += (login -> user)
+              user.start()
             }
-          } catch {
-            case t: Throwable =>
+            case Failure(e) => {
+              val os = client.getOutputStream
+              os.write('N')
+              os.flush()
+              client.close()
+            }
           }
+        } catch {
+          case t: Throwable => breaks.break()
         }
       }
-    }).start()
+    }
   }
 
-  def stop() = {
-    running = false
-    Option(server).map(_.close)
-  }
-
-  override def close(): Unit = stop
+  override def close(): Unit = server.close()
 }
 
-class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread {
+class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread with StreamUtils {
   val evaluator = new EveEvaluator()(session)
   val parser = new SentenceParser(new WordDatabase)
+  val connected = new AtomicBoolean(false)
 
   override def run(): Unit = {
-    var connected = true
-    val is = socket.getInputStream
-
-    while(connected){
+    while(connected.get()){
       try {
-        val dataLength = new Array[Byte](4)
+        /*val dataLength = new Array[Byte](4)
 
         if(is.read(dataLength, 0, dataLength.length) != dataLength.length){
           connected = false
@@ -112,13 +93,16 @@ class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thre
             }
           }
 
-          val obj = parser.parseText(text.toString())
+          val obj = parser.parseText(text.toString())*/
+        val text = readValue()
+        Option(text).map { t =>
+          val obj = parser.parseText(t)
           println(evaluator.eval(obj))
-        }
+        }.getOrElse(connected.set(false))
       } catch {
         case e: Throwable => {
           e.printStackTrace()
-          connected = false
+          connected.set(false)
         }
       }
     }

@@ -6,7 +6,7 @@ import com.mongodb.casbah.MongoCollection
 /**
  * Created by chris on 01/03/17.
  */
-class EveHistory(val historyCollection: MongoCollection) extends History {
+class EveHistory(val historyCollection: MongoCollection) extends History {  // TODO: add the session to get the history for a specific user
   override def addItem(o: EveObject): Unit = ???
 
   override def getLastItem(): Option[EveObject] = ???

@@ -2,7 +2,7 @@ import com.ideal.eve.db.EveEvaluator
 import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
-import com.ideal.eve.universe.Universe
+import com.ideal.eve.universe.EveUniverse
 import com.ideal.evecore.interpreter.{EveFailureObject, EveSuccessObject, EveStringObject, EveStructuredObject}
 import com.ideal.evecore.io.CommonKey
 import com.ideal.evecore.universe.World
@@ -25,7 +25,7 @@ class ConvertSpec extends FlatSpec with Matchers {
   "The conversion" should "return 3600" in {
     val converterReceiver = new UnitConverterController
 
-    Universe.registerReceiver(converterReceiver)
+    EveUniverse.registerReceiver(converterReceiver)
 
     val i = new PronounSubject(new IPronoun {
       override def getSource: PronounSource = PronounSource.I
@@ -86,7 +86,7 @@ class ConvertSpec extends FlatSpec with Matchers {
     evaluator.eval(myAgeIs26Years)
     val result = evaluator.eval(convertMyAgeIntoSeconds)
 
-    Universe.unregisterReceiver(converterReceiver)
+    EveUniverse.unregisterReceiver(converterReceiver)
 
     result match {
       case EveSuccessObject(v) => println(v)

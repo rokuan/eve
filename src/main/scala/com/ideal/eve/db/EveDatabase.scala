@@ -2,7 +2,7 @@ package com.ideal.eve.db
 
 import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.server.EveSession
-import com.ideal.eve.universe.Universe
+import com.ideal.eve.universe.EveUniverse
 import com.ideal.evecore.universe.execution.TaskHandler
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
@@ -55,7 +55,7 @@ class EveEvaluator(implicit val session: EveSession) extends Evaluator {
 
   override protected val context: Context = EveEnvironment
   override protected val history: History = new EveHistory(db(HistoryCollectionName))
-  override protected val taskHandler: TaskHandler = new TaskHandler(Universe)
+  override protected val taskHandler: TaskHandler = new TaskHandler(EveUniverse)
 
   private def findMyNameObject(name: NameObject): Try[EveObject] = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)

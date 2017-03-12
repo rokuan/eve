@@ -7,12 +7,10 @@ import com.ideal.evecore.universe.receiver.Receiver
 /**
  * Created by chris on 01/03/17.
  */
-object Universe extends World {
+object EveUniverse extends World {
   private val world = new MinimalWorld
 
   override def registerReceiver(receiver: Receiver): Unit = world.registerReceiver(receiver)
-
   override def unregisterReceiver(receiver: Receiver): Unit = world.unregisterReceiver(receiver)
-
   override def findReceiver(o: EveStructuredObject): Option[Receiver] = world.findReceiver(o)
 }
