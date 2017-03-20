@@ -6,6 +6,8 @@ import com.mongodb.casbah.Imports._
 import com.mongodb.casbah.commons.MongoDBObject
 import com.rokuan.calliopecore.sentence.IValue
 
+import scala.util.Try
+
 /**
   * Created by Christophe on 11/12/2016.
   */
@@ -13,8 +15,10 @@ class ItemCollection[T <: IValue](val collectionName: String)(implicit writer: M
   val underlying = {
     val mainDB = WordDatabase.CalliopeDB
     if(!mainDB.collectionExists(collectionName)){
-      mainDB.createCollection(collectionName, MongoDBObject())
-      mainDB(collectionName).createIndex(MongoDBObject("value" -> 1), MongoDBObject("unique" -> true))
+      Try {
+        mainDB.createCollection(collectionName, MongoDBObject())
+        mainDB(collectionName).createIndex(MongoDBObject("value" -> 1), MongoDBObject("unique" -> true))
+      }
     }
     mainDB(collectionName)
   }

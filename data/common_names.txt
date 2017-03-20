@@ -7828,7 +7828,7 @@ cartels;_
 écartelé;_
 écartement;_
 écartements;_
-carte;_
+carte;MAP
 carterie;_
 carter;_
 carters;_
@@ -11503,7 +11503,7 @@ coordinateurs;_
 coordination;_
 coordinatrice;_
 coordonnateur;_
-coordonnées;_
+coordonnées;LOCATION
 coordonnée;_
 coordonnés;_
 copaïba;_
@@ -35448,7 +35448,7 @@ positifs;_
 position-clé;_
 positionnement;_
 positionneur;_
-position;_
+position;LOCATION
 positions;_
 positivisme;_
 positiviste;_

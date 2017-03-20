@@ -3,7 +3,7 @@ package com.ideal.eve.server
 import java.net.{ServerSocket, Socket}
 import java.util.concurrent.atomic.AtomicBoolean
 
-import com.ideal.eve.controller.EveAuth
+import com.ideal.eve.controller.auth.EveAuth
 import com.ideal.eve.db.{EveEvaluator, WordDatabase}
 import com.ideal.evecore.interpreter.remote.StreamUtils
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
