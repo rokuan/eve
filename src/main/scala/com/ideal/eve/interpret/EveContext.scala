@@ -67,22 +67,26 @@ class EveContext private (val db: MongoDB) extends Context {
     gson.fromJson(JSON.serialize(obj), objClass)
   }
 
-  override def findItemsOfType(t: String): Option[EveObject] = None // TODO:
+  override def findItemsOfType(t: String): Option[EveObjectList] = None // TODO:
+  override def findOneItemOfType(t: String): Option[EveStructuredObject] = None // TODO
 }
 
 class EveDatabaseContext private (val collection: MongoCollection) extends Context {
-  override def findItemsOfType(t: String): Option[EveObject] = {
+  override def findItemsOfType(t: String): Option[EveObjectList] = {
     val results = collection.find(MongoDBObject(EveObject.TypeKey -> t))
     val resultList = results.toList
     results.close()
 
     if(resultList.isEmpty){
-      Option.empty[EveObject]
-    } else if(resultList.size == 1){
-      resultList.headOption.map(new EveMongoDBObject(_)(collection))
+      Option.empty[EveObjectList]
     } else {
       Some(EveObjectList(resultList.map(new EveMongoDBObject(_)(collection))))
     }
+  }
+
+  override def findOneItemOfType(t: String): Option[EveStructuredObject] = {
+    collection.findOne(MongoDBObject(EveObject.TypeKey -> t))
+      .map(new EveMongoDBObject(_)(collection))
   }
 }
 

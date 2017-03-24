@@ -68,7 +68,7 @@ class EveServer(val port: Int) extends Thread with AutoCloseable {
 class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread with StreamUtils {
   val evaluator = new EveEvaluator()(session)
   val parser = new SentenceParser(new WordDatabase)
-  val connected = new AtomicBoolean(false)
+  val connected = new AtomicBoolean(true)
 
   override def run(): Unit = {
     while(connected.get()){

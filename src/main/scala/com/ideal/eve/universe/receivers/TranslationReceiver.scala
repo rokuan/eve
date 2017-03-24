@@ -41,7 +41,7 @@ class TranslationReceiver extends Receiver {
 
   override def handleMessage(message: Message): Try[EveObject] = message match {
     case EveObjectMessage(obj) => Try {
-      val text = (obj \ InterpretationObjectKey.What \ EveObject.Value).toText
+      val text = (obj \ InterpretationObjectKey.What \ EveObject.ValueKey).toText
       val language = (obj \ InterpretationObjectKey.How \ LanguageObjectKey.Code).toText
       translate(text, language)
     }
