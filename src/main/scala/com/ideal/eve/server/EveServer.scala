@@ -73,27 +73,6 @@ class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thre
   override def run(): Unit = {
     while(connected.get()){
       try {
-        /*val dataLength = new Array[Byte](4)
-
-        if(is.read(dataLength, 0, dataLength.length) != dataLength.length){
-          connected = false
-        } else {
-          var dataSize = (0 until dataLength.length).map(i => (dataLength(i) & 0xFF) << (8 * i)).foldLeft(0)(_ + _)
-          val text = new StringBuilder
-
-          while(dataSize > 0){
-            val tmp = new Array[Byte](1024)
-            val size = is.read(tmp, 0, tmp.length)
-
-            if(size > 0){
-              text.append(new String(tmp, 0, size))
-              dataSize -= size
-            } else {
-              // TODO: error
-            }
-          }
-
-          val obj = parser.parseText(text.toString())*/
         val text = readValue()
         Option(text).map { t =>
           val obj = parser.parseText(t)
