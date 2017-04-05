@@ -1,15 +1,18 @@
 package com.ideal.eve.server
 
-import java.net.{ServerSocket, Socket}
-import java.util.concurrent.atomic.AtomicBoolean
+import java.net.Socket
 
 import com.ideal.eve.controller.auth.EveAuth
-import com.ideal.eve.db.{EveEvaluator, WordDatabase}
-import com.ideal.evecore.interpreter.remote.StreamUtils
+import com.ideal.eve.db.{WordDatabase, EveDatabase, EveEvaluator}
+import com.ideal.eve.environment.EveEnvironment
+import com.ideal.eve.universe.EveUniverse
+import com.ideal.evecore.interpreter.{Environment, Evaluator}
+import com.ideal.evecore.io.{UserSocket, UserServer}
+import com.ideal.evecore.universe.World
 import com.rokuan.calliopecore.fr.autoroute.parser.SentenceParser
+import com.rokuan.calliopecore.parser.AbstractParser
 
-import scala.util.control.Breaks
-import scala.util.{Failure, Success}
+import scala.util.Try
 
 
 /**
@@ -19,53 +22,19 @@ object EveServer {
   val ServerConfigurationFile = "server.properties"
 }
 
-class EveServer(val port: Int) extends Thread with AutoCloseable {
-  val server = new ServerSocket(port)
-  val users = collection.mutable.Map[String, EveUser]()
-
-  override def run() = {
-    val breaks = new Breaks
-
-    breaks.breakable {
-      while(true){
-        try {
-          val client = server.accept()
-          val is = client.getInputStream
-          val loginData = new Array[Byte](is.read() & 0xFF)
-          is.read(loginData)
-          val passwordData = new Array[Byte](is.read() & 0xFF)
-          is.read(passwordData)
-
-          val login = new String(loginData)
-          val password = new String(passwordData)
-
-          EveAuth.login(login, password) match {
-            case Success(l) => {
-              val user = new EveUser(client)(new EveSession(l))
-              val os = client.getOutputStream
-              os.write('Y')
-              os.flush()
-              users += (login -> user)
-              user.start()
-            }
-            case Failure(e) => {
-              val os = client.getOutputStream
-              os.write('N')
-              os.flush()
-              client.close()
-            }
-          }
-        } catch {
-          case t: Throwable => breaks.break()
-        }
-      }
-    }
-  }
-
-  override def close(): Unit = server.close()
+class EveServer(port: Int) extends UserServer[EveSession](port) {
+  override def authenticate(login: String, password: String): Try[EveSession] = EveAuth.login(login, password).map(l => new EveSession(l))
+  override def connectUser(socket: Socket, user: EveSession): UserSocket[EveSession] = new EveUser(socket, user)
 }
 
-class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread with StreamUtils {
+class EveUser(socket: Socket, session: EveSession) extends UserSocket[EveSession](socket, session) {
+  override protected val environment: Environment = new EveEnvironment()
+  override protected val world: World = new EveUniverse()
+  override protected val evaluator: Evaluator = new EveEvaluator(environment, world)(session)
+  override protected val parser: AbstractParser = new SentenceParser(WordDatabase)
+}
+
+/*class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thread with StreamUtils {
   val evaluator = new EveEvaluator()(session)
   val parser = new SentenceParser(new WordDatabase)
   val connected = new AtomicBoolean(true)
@@ -88,4 +57,4 @@ class EveUser(val socket: Socket)(implicit val session: EveSession) extends Thre
 
     socket.close()
   }
-}
+}*/

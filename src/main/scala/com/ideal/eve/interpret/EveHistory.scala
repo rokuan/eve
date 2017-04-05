@@ -1,19 +1,20 @@
 package com.ideal.eve.interpret
 
-import com.ideal.evecore.interpreter.{EveObject, History}
+import com.ideal.evecore.interpreter.{EveStructuredObject, EveObject, History}
 import com.mongodb.casbah.MongoCollection
 
 /**
  * Created by chris on 01/03/17.
  */
+// TODO: complete the methods
 class EveHistory(val historyCollection: MongoCollection) extends History {  // TODO: add the session to get the history for a specific user
-  override def addItem(o: EveObject): Unit = ???
+  override def getLastItem(): Option[EveStructuredObject] = Option.empty[EveStructuredObject]
 
-  override def getLastItem(): Option[EveObject] = ???
+  override def getLastItemOfType(t: String): Option[EveStructuredObject] = Option.empty[EveStructuredObject]
 
-  override def getLastItemOfType(t: String): Option[EveObject] = ???
+  override def getLastPlace(): Option[EveStructuredObject] = Option.empty[EveStructuredObject]
 
-  override def addPlace(o: EveObject): Unit = ???
+  override def addItem(o: EveStructuredObject): Unit = {}
 
-  override def getLastPlace(): Option[EveObject] = ???
+  override def addPlace(o: EveStructuredObject): Unit = {}
 }

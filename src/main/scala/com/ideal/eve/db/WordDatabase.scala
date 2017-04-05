@@ -12,7 +12,7 @@ import com.rokuan.calliopecore.sentence.IValue
 /**
   * Created by Christophe on 10/12/2016.
   */
-class WordDatabase extends WordStorage {
+/*class WordDatabase extends WordStorage {
   import WordDatabase._
 
   override def wordStartsWith(q: String): Boolean = queryDatabases.exists(_.findOneStartingWith(q).isDefined)
@@ -39,9 +39,9 @@ class WordDatabase extends WordStorage {
   override def findCustomPerson(q: String): CustomPerson = CustomPeople.get(q)
   override def findCustomPlace(q: String): CustomPlace = CustomPlaces.get(q)
   override def findCustomObject(q: String): CustomObject = CustomObjects.get(q)
-}
+}*/
 
-object WordDatabase {
+object WordDatabase extends WordStorage {
   import MongoDBWriter._
   import MongoDBReader._
 
@@ -99,6 +99,31 @@ object WordDatabase {
     loadData("way_prepositions.txt", WayPrepositions)
     loadData("purpose_prepositions.txt", PurposePrepositions)
   }
+
+  override def wordStartsWith(q: String): Boolean = queryDatabases.exists(_.findOneStartingWith(q).isDefined)
+  override def findUnitInfo(q: String): UnitInfo = Units.get(q)
+  override def findCityInfo(q: String): CityInfo = Cities.get(q)
+  override def findPlaceInfo(q: String): PlaceInfo = Places.get(q)
+  override def findLanguageInfo(q: String): LanguageInfo = Languages.get(q)
+  override def findCharacterInfo(q: String): CharacterInfo = Characters.get(q)
+  override def findColorInfo(q: String): ColorInfo = Colors.get(q)
+  override def findTransportInfo(q: String): TransportInfo = Transports.get(q)
+  override def findConjugation(q: String): VerbConjugation = Conjugations.get(q)
+  override def findNameInfo(q: String): NameInfo = Names.get(q)
+  override def findFirstnameInfo(q: String): FirstNameInfo = FirstNames.get(q.toLowerCase) //FirstNames.get(q)
+  override def findWordInfo(q: String): WordInfo = Words.get(q)
+  override def findAdjectiveInfo(q: String): AdjectiveInfo = Adjectives.get(q)
+
+  override def findTimePreposition(q: String): TimePreposition = TimePrepositions.get(q)
+  override def findPlacePreposition(q: String): PlacePreposition = PlacePrepositions.get(q)
+  override def findWayPreposition(q: String): WayPreposition = WayPrepositions.get(q)
+  override def findPurposePreposition(q: String): PurposePreposition = PurposePrepositions.get(q)
+
+  override def findCustomMode(q: String): CustomMode = CustomModes.get(q)
+  override def findCountryInfo(q: String): CountryInfo = Countries.get(q)
+  override def findCustomPerson(q: String): CustomPerson = CustomPeople.get(q)
+  override def findCustomPlace(q: String): CustomPlace = CustomPlaces.get(q)
+  override def findCustomObject(q: String): CustomObject = CustomObjects.get(q)
 
   private def loadData[T <: IValue](file: String, collection: ItemCollection[T])(implicit adapter: DataAdapter[T]) = {
     val f = new File(file)

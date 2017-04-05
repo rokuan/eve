@@ -1,8 +1,7 @@
 package com.ideal.eve.db
 
-import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.server.EveSession
-import com.ideal.eve.universe.EveUniverse
+import com.ideal.evecore.universe.World
 import com.ideal.evecore.universe.execution.TaskHandler
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
@@ -47,15 +46,14 @@ object EveDatabase {
   def notImplementedYet = throw new RuntimeException("Not implemented yet")
 }
 
-class EveEvaluator(implicit val session: EveSession) extends Evaluator {
+class EveEvaluator(val context: Context, val world: World)(implicit val session: EveSession) extends Evaluator {
   import EveDatabase._
 
   val objectsCollection: MongoCollection = db(ObjectCollectionName)
   val typesCollection: MongoCollection = db(TypeCollectionName)
 
-  override protected val context: Context = EveEnvironment
   override protected val history: History = new EveHistory(db(HistoryCollectionName))
-  override protected val taskHandler: TaskHandler = new TaskHandler(EveUniverse)
+  override protected val taskHandler: TaskHandler = new TaskHandler(world)
 
   private def findMyNameObject(name: NameObject): Try[EveObject] = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)

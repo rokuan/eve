@@ -4,7 +4,7 @@ import com.ideal.eve.db.EveDatabase
 import com.ideal.evecore.common.Mapping.Mapping
 import com.ideal.evecore.interpreter.EveObject
 import com.ideal.evecore.io.InterpretationObjectKey
-import com.ideal.evecore.universe.receiver.{Message, Receiver}
+import com.ideal.evecore.universe.receiver.{EveObjectMessage, Receiver}
 import com.ideal.evecore.universe.{ObjectValueMatcher, OrValueMatcher, StringValueMatcher, ValueMatcher}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 
@@ -21,7 +21,7 @@ class LightManagerReceiver extends Receiver {
     InterpretationObjectKey.What -> ObjectValueMatcher(EveDatabase.TypeKey -> StringValueMatcher("LIGHT"))
   )
 
-  override def handleMessage(message: Message): Try[EveObject] = Failure(new Exception("Not implemented yet"))
+  override def handleMessage(message: EveObjectMessage): Try[EveObject] = Failure(new Exception("Not implemented yet"))
 
   override def destroyReceiver(): Unit = {}
 }

@@ -7,6 +7,10 @@ import com.ideal.evecore.interpreter.Environment
 /**
   * Created by Christophe on 28/12/2016.
   */
-object EveEnvironment extends Environment {
+class EveEnvironment extends Environment {
   addContext(EveDatabaseContext())
+}
+
+object EveEnvironment extends Environment {
+
 }

@@ -2,6 +2,7 @@ import com.ideal.eve.db.EveEvaluator
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
 import com.ideal.evecore.interpreter.{EveSuccessObject, EveStringObject}
+import com.ideal.evecore.universe.MinimalWorld
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence._
@@ -65,8 +66,11 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     whatIsMyName.setAction(new ActionObject(Tense.PRESENT, is))
     whatIsMyName.setDirectObject(myName)
 
+    // TODO:
+    val world = new MinimalWorld
+    val context = new EveContext(world)
     val mySession = new EveSession("chris")
-    val evaluator = new EveEvaluator()(mySession)
+    val evaluator = new EveEvaluator(context, world)(mySession)
     evaluator.eval(myNameIsChristophe)
     evaluator.eval(whatIsMyName) match {
       case EveSuccessObject(EveStringObject(s)) => s shouldBe "Christophe"

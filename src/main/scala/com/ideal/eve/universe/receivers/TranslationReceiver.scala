@@ -6,7 +6,7 @@ import com.ideal.evecore.common.Mapping.Mapping
 import com.ideal.evecore.interpreter.EveObject
 import com.ideal.evecore.io.{LanguageObjectKey, WayObjectKey, InterpretationObjectKey}
 import com.ideal.evecore.universe.{StringValueMatcher, ObjectValueMatcher, ValueMatcher}
-import com.ideal.evecore.universe.receiver.{EveObjectMessage, Message, Receiver}
+import com.ideal.evecore.universe.receiver.{EveObjectMessage, Receiver}
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.WayType
 import com.ideal.evecore.interpreter.EveObjectDSL._
@@ -39,12 +39,11 @@ class TranslationReceiver extends Receiver {
     InterpretationObjectKey.How -> ObjectValueMatcher(WayObjectKey.WayType -> StringValueMatcher(WayType.LANGUAGE.name()))
   )
 
-  override def handleMessage(message: Message): Try[EveObject] = message match {
-    case EveObjectMessage(obj) => Try {
-      val text = (obj \ InterpretationObjectKey.What \ EveObject.ValueKey).toText
-      val language = (obj \ InterpretationObjectKey.How \ LanguageObjectKey.Code).toText
-      translate(text, language)
-    }
+  override def handleMessage(message: EveObjectMessage): Try[EveObject] = Try {
+    val obj = message.obj
+    val text = (obj \ InterpretationObjectKey.What \ EveObject.ValueKey).toText
+    val language = (obj \ InterpretationObjectKey.How \ LanguageObjectKey.Code).toText
+    translate(text, language)
   }
 
   override def destroyReceiver(): Unit = {}
