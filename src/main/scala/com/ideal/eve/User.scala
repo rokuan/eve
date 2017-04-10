@@ -9,6 +9,8 @@ import com.ideal.evecore.io.{Credentials, UserConnection}
 object User {
   def main(args: Array[String]): Unit = {
     val connection = new UserConnection("localhost", ServerParams.UserServerPort, new Credentials("chris", "chris"))
-    connection.disconnect()
+    connection.start()
+    println(connection.evaluate("quelle est la location"))
+    //connection.disconnect()
   }
 }

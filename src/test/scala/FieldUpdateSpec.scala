@@ -68,7 +68,7 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
 
     // TODO:
     val world = new MinimalWorld
-    val context = new EveContext(world)
+    val context = EveContext()
     val mySession = new EveSession("chris")
     val evaluator = new EveEvaluator(context, world)(mySession)
     evaluator.eval(myNameIsChristophe)

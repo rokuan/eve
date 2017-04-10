@@ -3,9 +3,9 @@ import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
 import com.ideal.eve.universe.EveUniverse
-import com.ideal.evecore.interpreter.{EveFailureObject, EveSuccessObject, EveStringObject, EveStructuredObject}
+import com.ideal.evecore.interpreter.{EveFailureObject, EveStringObject, EveStructuredObject, EveSuccessObject}
 import com.ideal.evecore.io.CommonKey
-import com.ideal.evecore.universe.World
+import com.ideal.evecore.universe.{MinimalWorld, World}
 import com.ideal.evecore.universe.receiver.base.UnitConverterController
 import com.rokuan.calliopecore.sentence._
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
@@ -24,8 +24,6 @@ import scala.util.{Failure, Success}
 class ConvertSpec extends FlatSpec with Matchers {
   "The conversion" should "return 3600" in {
     val converterReceiver = new UnitConverterController
-
-    EveUniverse.registerReceiver(converterReceiver)
 
     val i = new PronounSubject(new IPronoun {
       override def getSource: PronounSource = PronounSource.I
@@ -82,11 +80,12 @@ class ConvertSpec extends FlatSpec with Matchers {
     myAgeIs26Years.what = years
 
     val mySession = new EveSession("chris")
-    val evaluator = new EveEvaluator()(mySession)
+    val world = new MinimalWorld
+    world.registerReceiver(converterReceiver)
+    val context = EveContext()
+    val evaluator = new EveEvaluator(context, world)(mySession)
     evaluator.eval(myAgeIs26Years)
     val result = evaluator.eval(convertMyAgeIntoSeconds)
-
-    EveUniverse.unregisterReceiver(converterReceiver)
 
     result match {
       case EveSuccessObject(v) => println(v)
