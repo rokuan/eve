@@ -246,7 +246,7 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
     commonType.name
   }
 
-  override def findNameObject(name: NameObject): Try[EveObject] = notImplementedYet
+  //override def findNameObject(name: NameObject): Try[EveObject] = notImplementedYet
 
   override def findCharacter(char: CharacterObject): Try[EveObject] = notImplementedYet
 
