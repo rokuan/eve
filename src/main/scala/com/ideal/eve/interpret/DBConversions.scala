@@ -2,10 +2,13 @@ package com.ideal.eve.interpret
 
 import com.google.gson.Gson
 import com.ideal.evecore.interpreter._
+import com.ideal.evecore.interpreter.data.EveMappingObject
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
 import com.rokuan.calliopecore.sentence.structure.content.{IPlaceObject, ITimeObject}
+
+import scala.collection.JavaConversions._
 
 import scala.util.Try
 
@@ -19,26 +22,26 @@ object EveObjectConverters {
   /*implicit def eveStructuredObjectToMongoDBObject(o: EveStructuredObject): MongoDBObject =
     o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject*/
   implicit def eveMappingObjectToMongoDBObject(o: EveMappingObject): MongoDBObject =
-    o.o.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject
+    o.getValues.map { case (k, v) => (k -> eveObjectToMongoDBObject(v)) }.asDBObject
 
-  implicit def eveObjectToMongoDBObject(o: EveObject): AnyRef = {
+  implicit def eveObjectToMongoDBObject(o: EObject): AnyRef = {
     o match {
       case null => null
-      case EveBooleanObject(b) => b
-      case EveNumberObject(n) => n
-      case EveStringObject(s) => s
-      case EveDateObject(d) => d
-      case EveTimeObject(t) => {
+      case EBooleanObject(b) => b
+      case ENumberObject(n) => n
+      case EStringObject(s) => s
+      case EDateObject(d) => d
+      case ETimeObject(t) => {
         val gson: Gson = FullGsonBuilder.getSerializationGsonBuilder.create()
         JSON.parse(gson.toJson(t, classOf[ITimeObject])).asInstanceOf[MongoDBObject]
       }
-      case EvePlaceObject(p) => {
+      case EPlaceObject(p) => {
         val gson: Gson = FullGsonBuilder.getSerializationGsonBuilder.create()
         JSON.parse(gson.toJson(p, classOf[IPlaceObject])).asInstanceOf[MongoDBObject]
       }
       //case o: EveStructuredObject => eveStructuredObjectToMongoDBObject(o)
       case o: EveMappingObject => eveMappingObjectToMongoDBObject(o)
-      case EveObjectList(a) => MongoDBList(a.map(eveObjectToMongoDBObject(_)))
+      case EObjectList(a) => MongoDBList(a.map(eveObjectToMongoDBObject(_)))
       case EveObjectId(id) => id
       case _ => MongoDBObject()
     }
@@ -58,7 +61,7 @@ object EveObjectConversions {
     }
   }*/
 
-  implicit def dbObjectToEveObject(o: Any): EveObject = Try(EveObject(o)).getOrElse {
+  implicit def dbObjectToEveObject(o: Any): EObject = Try(implicitly[EObject](o)).getOrElse {
     o match {
       case o: BasicDBObject =>
         val mongoObject: MongoDBObject = o
@@ -70,13 +73,13 @@ object EveObjectConversions {
     }
   }
 
-  implicit def dbDataToEveObject(o: AnyRef): EveObject = o: Any
+  implicit def dbDataToEveObject(o: AnyRef): EObject = o: Any
 
-  implicit def mongoDBObjectToEveObject(o: MongoDBObject): EveObject =
-    EveMappingObject(o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap)
+  implicit def mongoDBObjectToEveObject(o: MongoDBObject): EObject =
+    o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap
 
-  implicit def mongoDBListToEveObject(o: MongoDBList): EveObject =
-    EveObjectList(o.map(dbObjectToEveObject))
+  implicit def mongoDBListToEveObject(o: MongoDBList): EObject =
+    EObjectList(o.map(dbObjectToEveObject))
 }
 
-case class EveObjectId(o: ObjectId) extends EveObject
+case class EveObjectId(o: ObjectId) extends EObject

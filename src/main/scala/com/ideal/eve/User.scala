@@ -1,7 +1,8 @@
 package com.ideal.eve
 
 import com.ideal.eve.config.ServerParams
-import com.ideal.evecore.io.{Credentials, UserConnection}
+import com.ideal.evecore.common.Credentials
+import com.ideal.evecore.io.UserConnection
 
 /**
  * Created by chris on 05/04/2017.

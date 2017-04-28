@@ -1,12 +1,16 @@
 package com.ideal.eve.universe.receivers
 
 import com.ideal.eve.db.EveDatabase
-import com.ideal.evecore.common.Mapping.Mapping
-import com.ideal.evecore.interpreter.EveObject
+import com.ideal.evecore.common.Mapping
+import com.ideal.evecore.interpreter.data.EveObject
 import com.ideal.evecore.io.InterpretationObjectKey
+import com.ideal.evecore.universe.matcher.ValueMatcher
 import com.ideal.evecore.universe.receiver.{EveObjectMessage, Receiver}
-import com.ideal.evecore.universe.{ObjectValueMatcher, OrValueMatcher, StringValueMatcher, ValueMatcher}
+import com.ideal.evecore.util.Result
 import com.rokuan.calliopecore.sentence.IAction.ActionType
+
+import com.ideal.evecore.universe.EValueMatcher._
+import com.ideal.evecore.common.Conversions._
 
 import scala.util.{Failure, Try}
 
@@ -16,12 +20,14 @@ import scala.util.{Failure, Try}
 class LightManagerReceiver extends Receiver {
   override def initReceiver(): Unit = {}
 
-  override def getMappings(): Mapping[ValueMatcher] = Map(
-    InterpretationObjectKey.Action -> OrValueMatcher(Array(StringValueMatcher(ActionType.TURN_ON.name()), StringValueMatcher(ActionType.TURN_OFF.name()))),
-    InterpretationObjectKey.What -> ObjectValueMatcher(EveDatabase.TypeKey -> StringValueMatcher("LIGHT"))
+  override def getMappings(): Mapping[ValueMatcher] = Map[String, ValueMatcher](
+    InterpretationObjectKey.Action -> Array[ValueMatcher](ActionType.TURN_ON.name(), ActionType.TURN_OFF.name()),
+    InterpretationObjectKey.What -> Map[String, ValueMatcher](EveObject.TYPE_KEY-> "LIGHT")
   )
 
-  override def handleMessage(message: EveObjectMessage): Try[EveObject] = Failure(new Exception("Not implemented yet"))
+  override def handleMessage(message: EveObjectMessage): Result[EveObject] = Result.ko(new Exception("Not implemented yet"))
 
   override def destroyReceiver(): Unit = {}
+
+  override def getReceiverName: String = getClass.getName
 }

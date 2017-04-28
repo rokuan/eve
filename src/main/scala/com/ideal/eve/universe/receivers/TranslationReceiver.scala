@@ -2,15 +2,21 @@ package com.ideal.eve.universe.receivers
 
 import com.ideal.eve.config.PropertyManager
 import com.ideal.eve.secret.Keys
-import com.ideal.evecore.common.Mapping.Mapping
-import com.ideal.evecore.interpreter.EveObject
+import com.ideal.evecore.common.Mapping
+import com.ideal.evecore.interpreter.{EStructuredObject, EObject}
+import com.ideal.evecore.interpreter.EObject._
+import com.ideal.evecore.interpreter.data.EveObject
 import com.ideal.evecore.io.{LanguageObjectKey, WayObjectKey, InterpretationObjectKey}
-import com.ideal.evecore.universe.{StringValueMatcher, ObjectValueMatcher, ValueMatcher}
+import com.ideal.evecore.universe.matcher.{ObjectValueMatcher, ValueMatcher}
 import com.ideal.evecore.universe.receiver.{EveObjectMessage, Receiver}
+import com.ideal.evecore.util.Result
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.WayType
 import com.ideal.evecore.interpreter.EveObjectDSL._
+import com.ideal.evecore.universe.EValueMatcher._
 import org.json4s.native.JsonMethods
+
+import com.ideal.evecore.common.Conversions._
 
 import TranslationReceiver._
 import scala.xml.XML
@@ -33,17 +39,20 @@ class TranslationReceiver extends Receiver {
 
   override def initReceiver(): Unit = {}
 
-  override def getMappings(): Mapping[ValueMatcher] = Map(
+  override def getMappings(): Mapping[ValueMatcher] = Map[String, ValueMatcher](
     InterpretationObjectKey.Action -> ActionType.TRANSLATE.name(),
-    InterpretationObjectKey.What -> ObjectValueMatcher(EveObject.TypeKey -> StringValueMatcher(EveObject.TextType)),
-    InterpretationObjectKey.How -> ObjectValueMatcher(WayObjectKey.WayType -> StringValueMatcher(WayType.LANGUAGE.name()))
+    InterpretationObjectKey.What -> Map[String, ValueMatcher](EveObject.TYPE_KEY -> EObject.TextType),
+    InterpretationObjectKey.How -> Map[String, ValueMatcher](WayObjectKey.WayType -> WayType.LANGUAGE.name())
   )
 
-  override def handleMessage(message: EveObjectMessage): Try[EveObject] = Try {
-    val obj = message.obj
-    val text = (obj \ InterpretationObjectKey.What \ EveObject.ValueKey).toText
+  override def handleMessage(message: EveObjectMessage): Result[EveObject] = Try {
+    val obj = implicitly[EStructuredObject](message.getContent)
+    val text = (obj \ InterpretationObjectKey.What \ EObject.ValueKey).toText
     val language = (obj \ InterpretationObjectKey.How \ LanguageObjectKey.Code).toText
     translate(text, language)
+  } match {
+    case Success(tr) => Result.ko(tr)
+    case Failure(e) => Result.ko(e)
   }
 
   override def destroyReceiver(): Unit = {}
@@ -76,6 +85,8 @@ class TranslationReceiver extends Receiver {
       case Failure(e) => throw e
     }
   }
+
+  override def getReceiverName: String = getClass.getName
 }
 
 object TranslationReceiver {

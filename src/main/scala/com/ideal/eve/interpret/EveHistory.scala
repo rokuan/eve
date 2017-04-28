@@ -1,6 +1,7 @@
 package com.ideal.eve.interpret
 
-import com.ideal.evecore.interpreter.{EveStructuredObject, EveObject, History}
+import com.ideal.evecore.interpreter.data.EveStructuredObject
+import com.ideal.evecore.interpreter.History
 import com.mongodb.casbah.MongoCollection
 
 /**

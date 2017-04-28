@@ -1,8 +1,9 @@
 package com.ideal.eve.db
 
 import com.ideal.eve.server.EveSession
+import com.ideal.evecore.evaluator.{TaskHandler, Interpreter}
+import com.ideal.evecore.interpreter.data.EveObject
 import com.ideal.evecore.universe.World
-import com.ideal.evecore.universe.execution.TaskHandler
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
@@ -46,7 +47,7 @@ object EveDatabase {
   def notImplementedYet = throw new RuntimeException("Not implemented yet")
 }
 
-class EveEvaluator(val context: Context, val world: World)(implicit val session: EveSession) extends Evaluator {
+class EveEvaluator(val context: Context, val world: World)(implicit val session: EveSession) extends Interpreter {
   import EveDatabase._
 
   val objectsCollection: MongoCollection = db(ObjectCollectionName)
@@ -55,7 +56,7 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
   override protected val history: History = new EveHistory(db(HistoryCollectionName))
   override protected val taskHandler: TaskHandler = new TaskHandler(world)
 
-  private def findMyNameObject(name: NameObject): Try[EveObject] = {
+  private def findMyNameObject(name: NameObject): Try[EObject] = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
     name.count.definition = ArticleType.DEFINITE
     name.setNominalSecondObject(pronoun)
@@ -241,18 +242,18 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
     case _ => notImplementedYet // TODO:
   }*/
 
-  override def getCommonSuperTypes(os: List[EveObject]): String = {
-    val commonType = EveType.getCommonSuperType(os.collect { case o: EveStructuredObject => EveType(o.getType()) })
+  override def getCommonSuperTypes(os: List[EObject]): String = {
+    val commonType = EveType.getCommonSuperType(os.collect { case o: EStructuredObject => EveType(o.getType()) })
     commonType.name
   }
 
   //override def findNameObject(name: NameObject): Try[EveObject] = notImplementedYet
 
-  override def findCharacter(char: CharacterObject): Try[EveObject] = notImplementedYet
+  override def findCharacter(char: CharacterObject): Try[EObject] = notImplementedYet
 
-  override def findAdditionalDataByCode(code: String): Try[EveObject] = notImplementedYet
+  override def findAdditionalDataByCode(code: String): Try[EObject] = notImplementedYet
 
-  override def findNamedPlace(place: NamedPlaceObject): Try[EveObject] = notImplementedYet
+  override def findNamedPlace(place: NamedPlaceObject): Try[EObject] = notImplementedYet
 
-  override def findPronounSource(pronoun: IPronoun): Try[EveObject] = notImplementedYet
+  override def findPronounSource(pronoun: IPronoun): Try[EObject] = notImplementedYet
 }

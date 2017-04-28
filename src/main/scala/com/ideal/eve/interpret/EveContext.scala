@@ -2,12 +2,18 @@ package com.ideal.eve.interpret
 
 import com.google.gson.Gson
 import com.ideal.eve.db.EveDatabase
-import com.ideal.evecore.interpreter.{EveObjectList, EveStructuredObject, EveObject, Context}
+import com.ideal.evecore.common.Conversions._
+import com.ideal.evecore.interpreter.data.{EveQueryObject, EveObject, EveStructuredObject, EveObjectList}
+import com.ideal.evecore.interpreter._
 import com.mongodb.casbah.{MongoCollection, MongoDB}
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
 import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, IPlaceObject, ITimeObject}
 import com.mongodb.casbah.query.Imports._
+
+import com.ideal.evecore.util.{ Option => EOpt }
+
+import EObject._
 
 import scala.util.Try
 
@@ -67,57 +73,62 @@ class EveContext private (val db: MongoDB) extends Context {
     gson.fromJson(JSON.serialize(obj), objClass)
   }
 
-  override def findItemsOfType(t: String): Option[EveObjectList] = None // TODO:
-  override def findOneItemOfType(t: String): Option[EveStructuredObject] = None // TODO
+  override def findItemsOfType(t: String): EOpt[EveObjectList] = EOpt.empty[EveObjectList] // TODO:
+  override def findOneItemOfType(t: String): EOpt[EveStructuredObject] = EOpt.empty[EveStructuredObject] // TODO
 }
 
 class EveDatabaseContext private (val collection: MongoCollection) extends Context {
-  override def findItemsOfType(t: String): Option[EveObjectList] = {
-    val results = collection.find(MongoDBObject(EveObject.TypeKey -> t))
+  override def findItemsOfType(t: String): EOpt[EveObjectList] = {
+    val results = collection.find(MongoDBObject(EveObject.TYPE_KEY -> t))
     val resultList = results.toList
     results.close()
 
     if(resultList.isEmpty){
       Option.empty[EveObjectList]
     } else {
-      Some(EveObjectList(resultList.map(new EveMongoDBObject(_)(collection))))
+      val elements = resultList.map(new EveMongoDBObject(_)(collection))
+      Some(new EveObjectList(elements))
     }
   }
 
-  override def findOneItemOfType(t: String): Option[EveStructuredObject] = {
-    collection.findOne(MongoDBObject(EveObject.TypeKey -> t))
+  override def findOneItemOfType(t: String): EOpt[EveStructuredObject] = {
+    collection.findOne(MongoDBObject(EveObject.TYPE_KEY -> t))
       .map(new EveMongoDBObject(_)(collection))
   }
 }
 
-class EveMongoDBObject(val underlying: MongoDBObject)(val initialCollection: MongoCollection) extends EveStructuredObject {
+class EveMongoDBObject(val internal: MongoDBObject)(val initialCollection: MongoCollection) extends EveQueryObject with EveStructuredObject {
   import EveObjectConverters._
-  import EveObjectConversions._
+  import EObject._
 
-  override def getType(): String = underlying.as[String](EveObject.TypeKey)
+  override def getType(): String = internal.as[String](EveObject.TYPE_KEY)
 
-  override def get(field: String): Option[EveObject] = underlying.get(field).map(v => v: EveObject)
+  override def get(field: String): EOpt[EveObject] = internal.get(field).map(v => v: EveObject)
 
-  override def getState(state: String): Option[String] = underlying.get("state").collect { case s: String => s }
+  override def getState(state: String): EOpt[String] = internal.get("state").collect {
+    case o: DBObject => o
+  }.flatMap(_.getAs[String](state))
 
-  override def apply(field: String): EveObject = underlying(field)
+  def apply(field: String): EveObject = internal(field)
 
   override def set(field: String, value: EveObject): Unit = {
-    underlying(field) = eveObjectToMongoDBObject(value)
-    initialCollection.save(underlying)
+    internal(field) = eveObjectToMongoDBObject(value)
+    initialCollection.save(internal)
   }
 
   override def setState(state: String, value: String): Unit = {
-    if(!underlying.contains("state")){
-      underlying("state") = MongoDBObject(state -> value)
+    if(!internal.contains("state")){
+      internal("state") = MongoDBObject(state -> value)
     } else {
-      val objectState = underlying.as[MongoDBObject]("state")
+      val objectState = internal.as[MongoDBObject]("state")
       objectState(state) = value
     }
-    initialCollection.save(underlying)
+    initialCollection.save(internal)
   }
 
-  override def has(field: String): Boolean = underlying.containsField(field)
+  override def has(field: String): Boolean = internal.containsField(field)
 
-  override def hasState(state: String): Boolean = underlying.getAs[MongoDBObject]("state").map(_.containsField(state)).getOrElse(false)
+  override def hasState(state: String): Boolean = internal.getAs[MongoDBObject]("state").map(_.containsField(state)).getOrElse(false)
+
+  override def getId(): String = internal._id.map(_.toString).getOrElse("")
 }
