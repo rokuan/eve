@@ -1,16 +1,12 @@
 import com.ideal.eve.db.EveEvaluator
-import com.ideal.eve.environment.EveEnvironment
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
-import com.ideal.eve.universe.EveUniverse
-import com.ideal.evecore.interpreter.{EveFailureObject, EveStringObject, EveStructuredObject, EveSuccessObject}
-import com.ideal.evecore.io.CommonKey
-import com.ideal.evecore.universe.{MinimalWorld, World}
+import com.ideal.evecore.universe.MinimalWorld
 import com.ideal.evecore.universe.receiver.base.UnitConverterController
 import com.rokuan.calliopecore.sentence._
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
-import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, OrderObject}
+import com.rokuan.calliopecore.sentence.structure.OrderObject
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.UnitObject.UnitType
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PronounSubject, QuantityObject, UnitObject}
@@ -87,9 +83,10 @@ class ConvertSpec extends FlatSpec with Matchers {
     evaluator.eval(myAgeIs26Years)
     val result = evaluator.eval(convertMyAgeIntoSeconds)
 
-    result match {
-      case EveSuccessObject(v) => println(v)
-      case EveFailureObject(e) => sys.error(e)
+    if (result.isSuccess) {
+      println(result.get)
+    } else {
+      result.getError.printStackTrace()
     }
   }
 }

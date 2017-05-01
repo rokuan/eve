@@ -1,7 +1,7 @@
 import com.ideal.eve.db.EveEvaluator
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
-import com.ideal.evecore.interpreter.{EveSuccessObject, EveStringObject}
+import com.ideal.evecore.interpreter.data.EveStringObject
 import com.ideal.evecore.universe.MinimalWorld
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
@@ -11,6 +11,7 @@ import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.Article
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PersonObject, PronounSubject}
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, QuestionObject}
 import org.scalatest.{FlatSpec, Matchers}
+import com.ideal.evecore.util.{Result => EResult}
 
 /**
   * Created by Christophe on 25/10/2015.
@@ -72,9 +73,11 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     val mySession = new EveSession("chris")
     val evaluator = new EveEvaluator(context, world)(mySession)
     evaluator.eval(myNameIsChristophe)
-    evaluator.eval(whatIsMyName) match {
-      case EveSuccessObject(EveStringObject(s)) => s shouldBe "Christophe"
-      case _ => throw new Exception("Value did not match")
+    val result = evaluator.eval(whatIsMyName)
+    if (result.isSuccess) {
+      result.get.asInstanceOf[EveStringObject].getValue shouldBe "Christophe"
+    } else {
+      throw new Exception("Value did not match")
     }
   }
 }

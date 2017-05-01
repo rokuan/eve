@@ -25,8 +25,8 @@ object EveServer {
 }
 
 class EveServer(port: Int) extends UserServer[EveSession](port) {
-  def authenticate(login: String, password: String): Result[EveSession] = EveAuth.login(login, password).map(l => new EveSession(l))
-  def connectUser(socket: Socket, user: EveSession): UserSocket[EveSession] = EveUser(socket, user)
+  override def authenticate(login: String, password: String): Result[EveSession] = EveAuth.login(login, password).map(l => new EveSession(l))
+  override def connectUser(socket: Socket, user: EveSession): UserSocket[EveSession] = EveUser(socket, user)
 }
 
 object EveUser {
