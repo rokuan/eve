@@ -1,0 +1,13 @@
+{
+  "action": "DISPLAY",
+  "what": [
+    {
+      "__eve_type": "location"
+    },
+    {
+      "location": {
+        "__eve_type": "location"
+      }
+    }
+  ]
+}
