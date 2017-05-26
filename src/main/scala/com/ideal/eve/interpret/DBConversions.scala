@@ -79,7 +79,7 @@ object EveObjectConversions {
     o.map { case (k, v) => (k -> dbObjectToEveObject(v)) }.toMap
 
   implicit def mongoDBListToEveObject(o: MongoDBList): EObject =
-    EObjectList(o.map(dbObjectToEveObject))
+    EObjectList(o.map(dbObjectToEveObject).toList)
 }
 
 case class EveObjectId(o: ObjectId) extends EObject

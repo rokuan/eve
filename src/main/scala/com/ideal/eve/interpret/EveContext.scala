@@ -111,19 +111,29 @@ class EveMongoDBObject(val internal: MongoDBObject)(val initialCollection: Mongo
 
   def apply(field: String): EveObject = internal(field)
 
-  override def set(field: String, value: EveObject): Unit = {
-    internal(field) = eveObjectToMongoDBObject(value)
-    initialCollection.save(internal)
+  override def set(field: String, value: EveObject): Boolean = {
+    try {
+      internal(field) = eveObjectToMongoDBObject(value)
+      initialCollection.save(internal)
+      true
+    } catch {
+      case _: Throwable => false
+    }
   }
 
-  override def setState(state: String, value: String): Unit = {
-    if(!internal.contains("state")){
-      internal("state") = MongoDBObject(state -> value)
-    } else {
-      val objectState = internal.as[MongoDBObject]("state")
-      objectState(state) = value
+  override def setState(state: String, value: String): Boolean = {
+    try {
+      if (!internal.contains("state")) {
+        internal("state") = MongoDBObject(state -> value)
+      } else {
+        val objectState = internal.as[MongoDBObject]("state")
+        objectState(state) = value
+      }
+      initialCollection.save(internal)
+      true
+    } catch {
+      case _: Throwable => false
     }
-    initialCollection.save(internal)
   }
 
   override def has(field: String): Boolean = internal.containsField(field)

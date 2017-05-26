@@ -2,9 +2,10 @@ package com.ideal.eve.db
 
 import com.ideal.eve.server.EveSession
 import com.ideal.evecore.evaluator.{TaskHandler, Interpreter}
-import com.ideal.evecore.interpreter.data.EveObject
+import com.ideal.evecore.interpreter.data.{EveStructuredObject, EveObject}
 import com.ideal.evecore.universe.World
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
+import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.ArticleType
 import com.rokuan.calliopecore.sentence.structure.data.nominal._
 import com.rokuan.calliopecore.sentence.structure.data.place.NamedPlaceObject
@@ -13,7 +14,7 @@ import com.ideal.eve.interpret._
 import com.ideal.evecore.interpreter._
 import com.rokuan.calliopecore.sentence.structure.data.count.{QuantityObject => _, _}
 
-import scala.util.Try
+import scala.util.{Success, Try}
 
 /**
   * Created by Christophe on 04/10/2015.
@@ -55,6 +56,7 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
 
   override protected val history: History = new EveHistory(db(HistoryCollectionName))
   override protected val taskHandler: TaskHandler = new TaskHandler(world)
+  override protected def getEngineObject(): EveStructuredObject = new EveEngine
 
   private def findMyNameObject(name: NameObject): Try[EObject] = {
     val pronoun: PronounSubject = new PronounSubject(name.count.possessiveTarget)
@@ -255,5 +257,8 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
 
   override def findNamedPlace(place: NamedPlaceObject): Try[EObject] = notImplementedYet
 
-  override def findPronounSource(pronoun: IPronoun): Try[EObject] = notImplementedYet
+  override def findPronounSource(pronoun: IPronoun): Try[EObject] = pronoun.getSource match {
+    case PronounSource.YOU => Success(getEngineObject())
+    case _ => notImplementedYet
+  }
 }
