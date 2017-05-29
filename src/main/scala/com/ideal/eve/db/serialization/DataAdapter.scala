@@ -16,18 +16,18 @@ import com.rokuan.calliopecore.sentence.structure.data.way.TransportObject.Trans
 import com.rokuan.calliopecore.sentence.structure.data.way.WayAdverbial.{WayContext, WayType}
 
 /**
-  * Created by Christophe on 13/12/2016.
-  */
+ * Created by Christophe on 13/12/2016.
+ */
 trait DataAdapter[T] {
   def transform(values: Array[String]): T
 }
 
 object DataAdapter extends EnumClassesImports with EnumUtils {
   import com.ideal.eve.db.WordDatabase._
-  
+
   private def getObject[T <: IValue](value: String, collection: ItemCollection[T]) = collection.find(value)
 
-  implicit def stringToBoolean(s: String) = if(s == 0) { false } else { true }
+  implicit def stringToBoolean(s: String) = if (s == 0) { false } else { true }
 
   implicit object WordInfoAdapter extends DataAdapter[WordInfo] {
     override def transform(values: Array[String]): WordInfo =
@@ -38,7 +38,7 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
     override def transform(values: Array[String]): ColorInfo =
       ColorInfo(values(0), values(1))
   }
-  
+
   implicit object LanguageInfoAdapter extends DataAdapter[LanguageInfo] {
     override def transform(values: Array[String]): LanguageInfo =
       LanguageInfo(values(0), values(1))
@@ -65,7 +65,7 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
   implicit object AdjectiveInfoAdapter extends DataAdapter[AdjectiveInfo] {
     override def transform(values: Array[String]): AdjectiveInfo = {
       val state = getObject(values(3), States)
-      
+
       AdjectiveInfo(
         values(0),
         javaEnum[AdjectiveValue](values(1)),
@@ -190,7 +190,8 @@ object DataAdapter extends EnumClassesImports with EnumUtils {
         javaEnum[ActionType](values(0)),
         values(1),
         state.map(_.state).orNull,
-        state.map(_.value).orNull
+        state.map(_.value).orNull,
+        values(3)
       )
     }
   }

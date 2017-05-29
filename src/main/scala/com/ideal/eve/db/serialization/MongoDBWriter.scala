@@ -9,8 +9,8 @@ import com.rokuan.calliopecore.sentence.IValue
 import org.bson.types.ObjectId
 
 /**
-  * Created by Christophe on 11/12/2016.
-  */
+ * Created by Christophe on 11/12/2016.
+ */
 trait MongoDBWriter[T] {
   def write(o: T): DBObject
 }
@@ -97,8 +97,11 @@ object MongoDBWriter {
   }
 
   implicit object CustomObjectWriter extends CustomDataWriter[CustomObject]
+
   implicit object CustomPlaceWriter extends CustomDataWriter[CustomPlace]
+
   implicit object CustomModeWriter extends CustomDataWriter[CustomMode]
+
   implicit object CustomPersonWriter extends CustomDataWriter[CustomPerson]
 
   object PrepositionWriter {
@@ -114,12 +117,15 @@ object MongoDBWriter {
   implicit object PlacePrepositionWriter extends MongoDBWriter[PlacePreposition] {
     override def write(o: PlacePreposition): DBObject = PrepositionWriter.write(o)
   }
+
   implicit object TimePrepositionWriter extends MongoDBWriter[TimePreposition] {
     override def write(o: TimePreposition): DBObject = PrepositionWriter.write(o)
   }
+
   implicit object WayPrepositionWriter extends MongoDBWriter[WayPreposition] {
     override def write(o: WayPreposition): DBObject = PrepositionWriter.write(o)
   }
+
   implicit object PurposePrepositionWriter extends MongoDBWriter[PurposePreposition] {
     override def write(o: PurposePreposition): DBObject = PrepositionWriter.write(o)
   }
@@ -158,18 +164,20 @@ object MongoDBWriter {
         "value" -> o.action.name(),
         "field" -> o.field,
         "state" -> o.state,
-        "stateValue" -> o.stateValue
+        "stateValue" -> o.stateValue,
+        "target" -> o.target
       )
     }
   }
 
   implicit object StateInfoWriter extends MongoDBWriter[StateInfo] {
-    override def write(o: StateInfo): DBObject =
+    override def write(o: StateInfo): DBObject = {
       MongoDBObject(
         "value" -> o.name,
         "state" -> o.state,
         "stateValue" -> o.value
       )
+    }
   }
 }
 

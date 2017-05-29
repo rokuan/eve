@@ -1,8 +1,9 @@
 import com.ideal.eve.db.EveEvaluator
 import com.ideal.eve.interpret.EveContext
 import com.ideal.eve.server.EveSession
-import com.ideal.evecore.interpreter.{EveSuccessObject, EveStringObject}
+import com.ideal.evecore.interpreter.EObject
 import com.ideal.evecore.universe.MinimalWorld
+import com.ideal.evecore.util.Result
 import com.rokuan.calliopecore.sentence.IAction.{ActionType, Form, Tense}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
 import com.rokuan.calliopecore.sentence._
@@ -11,6 +12,8 @@ import com.rokuan.calliopecore.sentence.structure.data.count.CountObject.Article
 import com.rokuan.calliopecore.sentence.structure.data.nominal.{NameObject, PersonObject, PronounSubject}
 import com.rokuan.calliopecore.sentence.structure.{AffirmationObject, QuestionObject}
 import org.scalatest.{FlatSpec, Matchers}
+import com.ideal.evecore.interpreter.EObject._
+import com.ideal.evecore.interpreter.EveObjectDSL._
 
 /**
   * Created by Christophe on 25/10/2015.
@@ -32,6 +35,7 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
       override def getState: String = null
       override def isStateBound: Boolean = false
       override def getBoundState: String = null
+      override def isTargetAction: Boolean = false
     }
 
     myNameIsChristophe.setSubject(i)
@@ -50,6 +54,7 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
       override def getState: String = null
       override def isStateBound: Boolean = false
       override def getBoundState: String = null
+      override def isTargetAction: Boolean = false
     }
     val myName = new NameObject()
     myName.count.definition = ArticleType.POSSESSIVE
@@ -72,9 +77,13 @@ class FieldUpdateSpec extends FlatSpec with Matchers {
     val mySession = new EveSession("chris")
     val evaluator = new EveEvaluator(context, world)(mySession)
     evaluator.eval(myNameIsChristophe)
-    evaluator.eval(whatIsMyName) match {
-      case EveSuccessObject(EveStringObject(s)) => s shouldBe "Christophe"
-      case _ => throw new Exception("Value did not match")
+    val result = evaluator.eval(whatIsMyName)
+    if (result.isSuccess) {
+      val o = implicitly[EObject](result.get())
+      val s = o.toText
+      s shouldBe "Christophe"
+    } else {
+      throw new Exception("Value did not match")
     }
   }
 }

@@ -1,8 +1,9 @@
 package com.ideal.eve.db
 
 import com.ideal.eve.server.EveSession
+import com.ideal.evecore.common.Conversions._
 import com.ideal.evecore.evaluator.{TaskHandler, Interpreter}
-import com.ideal.evecore.interpreter.data.{EveStructuredObject, EveObject}
+import com.ideal.evecore.interpreter.data.{EveStringObject, EveMappingObject, EveStructuredObject, EveObject}
 import com.ideal.evecore.universe.World
 import com.mongodb.casbah.{MongoCollection, MongoConnection}
 import com.rokuan.calliopecore.sentence.IPronoun.PronounSource
@@ -260,5 +261,10 @@ class EveEvaluator(val context: Context, val world: World)(implicit val session:
   override def findPronounSource(pronoun: IPronoun): Try[EObject] = pronoun.getSource match {
     case PronounSource.YOU => Success(getEngineObject())
     case _ => notImplementedYet
+  }
+
+  override protected def getMyData(): EveStructuredObject = {
+    // TODO:
+    new EveMappingObject(Map[String, EveObject]("name" -> new EveStringObject(session.username)))
   }
 }

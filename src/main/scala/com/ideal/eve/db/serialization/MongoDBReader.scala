@@ -20,8 +20,8 @@ import org.bson.types.ObjectId
 import com.mongodb.casbah.Imports._
 
 /**
-  * Created by Christophe on 11/12/2016.
-  */
+ * Created by Christophe on 11/12/2016.
+ */
 trait MongoDBReader[T] {
   def read(o: DBObject): T
 }
@@ -130,7 +130,7 @@ object MongoDBReader extends EnumClassesImports with EnumUtils {
       build(obj.getAsOrElse("value", ""), obj.getAsOrElse("code", ""))
     }
   }
-  
+
   implicit object CustomObjectReader extends CustomDataReader[CustomObject] {
     override def build: (String, String) => CustomObject = CustomObject
   }
@@ -174,7 +174,7 @@ object MongoDBReader extends EnumClassesImports with EnumUtils {
   implicit object PurposePrepositionReader extends PrepositionReader[PurposeContext, PurposeType, PurposePreposition] {
     override def build: (String, PurposeContext, Set[PurposeType]) => PurposePreposition = PurposePreposition
   }
-  
+
   implicit object VerbConjugationReader extends MongoDBReader[VerbConjugation] {
     override def read(o: DBObject): VerbConjugation = {
       val obj: MongoDBObject = o
@@ -207,7 +207,8 @@ object MongoDBReader extends EnumClassesImports with EnumUtils {
         getJavaEnumValue[ActionType](obj, "value"),
         obj.getAsOrElse[String]("field", null),
         obj.getAsOrElse[String]("state", null),
-        obj.getAsOrElse[String]("stateValue", null)
+        obj.getAsOrElse[String]("stateValue", null),
+        obj.getAsOrElse[Boolean]("target", false)
       )
     }
   }

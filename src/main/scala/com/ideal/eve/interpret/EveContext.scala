@@ -8,6 +8,7 @@ import com.ideal.evecore.interpreter._
 import com.mongodb.casbah.{MongoCollection, MongoDB}
 import com.mongodb.util.JSON
 import com.rokuan.calliopecore.json.FullGsonBuilder
+import com.rokuan.calliopecore.sentence.IAction
 import com.rokuan.calliopecore.sentence.structure.content.{INominalObject, IPlaceObject, ITimeObject}
 import com.mongodb.casbah.query.Imports._
 
@@ -141,4 +142,6 @@ class EveMongoDBObject(val internal: MongoDBObject)(val initialCollection: Mongo
   override def hasState(state: String): Boolean = internal.getAs[MongoDBObject]("state").map(_.containsField(state)).getOrElse(false)
 
   override def getId(): String = internal._id.map(_.toString).getOrElse("")
+
+  override def call(iAction: IAction): Boolean = false
 }

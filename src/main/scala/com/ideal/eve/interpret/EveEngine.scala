@@ -3,15 +3,19 @@ package com.ideal.eve.interpret
 import com.ideal.evecore.common.Conversions._
 import com.ideal.evecore.interpreter.{EObject, EStringObject}
 import com.ideal.evecore.interpreter.EObject._
-import com.ideal.evecore.interpreter.data.{EveMappingObject, EveObject, EveStructuredObject}
+import com.ideal.evecore.interpreter.data.{AbstractEveStructuredObject, EveMappingObject, EveObject, EveStructuredObject}
 import com.ideal.evecore.util.{ Option => EOption }
 import com.ideal.evecore.util.{ Pair => EPair }
 import com.ideal.eve.utils.UtilConversions._
+import com.rokuan.calliopecore.sentence.IAction.ActionType
 
 /**
  * Created by chris on 22/05/2017.
  */
-class EveEngine extends EveMappingObject(implicitly[(String, EveObject)]("name" -> "Eve")) {
+class EveEngine extends AbstractEveStructuredObject() {
+  protected val fields = collection.mutable.Map[String, EveObject](
+    "name" -> "Eve"
+  )
   protected val state = collection.mutable.Map[String, String]()
 
   override def getType: String = "engine"
@@ -25,31 +29,33 @@ class EveEngine extends EveMappingObject(implicitly[(String, EveObject)]("name" 
   override def has(s: String): Boolean = s == "name"
 
   override def setState(s: String, v: String): Boolean = {
-     if (v == "ON") {
-       if (v == "true") {
-         start()
-       } else if (v == "reset") {
-         restart()
-       } else {
-         stop()
-       }
-     } else {
-       false
-     }
-  }
-
-  protected def start(): Boolean = {
-    // TODO:
+    state.put(s, v)
     true
   }
 
-  protected def restart(): Boolean = {
-    // TODO:
-    false
+  override def get(s: String): EOption[EveObject] = fields.get(s)
+
+  override def call(actionType: ActionType): Boolean = {
+    actionType match {
+      case ActionType.START => start()
+      case ActionType.START_AGAIN => restart()
+      case ActionType.STOP => stop()
+      case _  => false
+    }
   }
 
+  protected def start(): Boolean = {
+    // Already started
+    println("Boot")
+    true
+  }
+  protected def restart(): Boolean = {
+    // TODO: reboot the machine
+    println("Reboot")
+    true
+  }
   protected def stop(): Boolean = {
-    // TODO:
-    false
+    println("Shutdown")
+    false // TODO:
   }
 }
