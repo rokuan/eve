@@ -73,12 +73,13 @@ object User {
   def main(args: Array[String]): Unit = {
     val context = new TestContext
     val receiver = new TestReceiver
+    val sentence = "redémarre"
     val connection = new UserConnection("localhost", ServerParams.UserServerPort, new Credentials("chris", "chris"))
     connection.start()
     connection.registerContext(context)
     connection.registerReceiver(receiver)
     try {
-      val result = connection.evaluate("affiche la position")
+      val result = connection.evaluate(sentence)
       if (result.isSuccess)
           println(result.get())
         else

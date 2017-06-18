@@ -1,12 +1,9 @@
 package com.ideal.eve.interpret
 
 import com.ideal.evecore.common.Conversions._
-import com.ideal.evecore.interpreter.{EObject, EStringObject}
 import com.ideal.evecore.interpreter.EObject._
-import com.ideal.evecore.interpreter.data.{AbstractEveStructuredObject, EveMappingObject, EveObject, EveStructuredObject}
+import com.ideal.evecore.interpreter.data.{AbstractEveStructuredObject, EveObject}
 import com.ideal.evecore.util.{ Option => EOption }
-import com.ideal.evecore.util.{ Pair => EPair }
-import com.ideal.eve.utils.UtilConversions._
 import com.rokuan.calliopecore.sentence.IAction.ActionType
 
 /**
@@ -26,7 +23,7 @@ class EveEngine extends AbstractEveStructuredObject() {
 
   override def getState(s: String): EOption[String] = state.get(s)
 
-  override def has(s: String): Boolean = s == "name"
+  override def has(s: String): Boolean = fields.contains(s)
 
   override def setState(s: String, v: String): Boolean = {
     state.put(s, v)
